@@ -44,6 +44,7 @@ make list
 make probe-malloc
 make probe-pinned
 make probe-stream
+make probe-managed
 ```
 
 `make` sets `PYTHONPATH=src`, so no installation is needed for development.
@@ -82,6 +83,7 @@ The architecture is taken from `--arch`, then `HIP_ARCH`, then `rocminfo`.
 | `probe_malloc_memcpy` | device allocation, synchronous H2D/D2H copy, kernel read/write | HIPIFY direct |
 | `probe_pinned_host_mem` | pinned host allocation and device round trip | fixed by rule |
 | `probe_stream_event` | two non-default streams, async copies, cross-stream event ordering | HIPIFY direct |
+| `probe_managed_memory` | managed (unified) memory written by the GPU and read by the host | HIPIFY direct |
 
 Planned probes are listed in the parent migration plan, not added ahead of
 review. Add one probe at a time and stop for review before continuing.

@@ -13,7 +13,14 @@ class ProbeDiscoveryTests(unittest.TestCase):
         self.assertIn("probe_malloc_memcpy", names)
         self.assertIn("probe_pinned_host_mem", names)
         self.assertIn("probe_stream_event", names)
+        self.assertIn("probe_managed_memory", names)
         self.assertEqual(names, tuple(sorted(names)))
+
+    def test_managed_memory_probe_uses_managed_allocation(self) -> None:
+        source = probe_source_text("probe_managed_memory")
+        self.assertIn("cudaMallocManaged", source)
+        self.assertIn("cudaMemAttachGlobal", source)
+        self.assertIn("RESULT=PASS", source)
 
     def test_stream_probe_covers_streams_and_events(self) -> None:
         source = probe_source_text("probe_stream_event")
