@@ -10,7 +10,13 @@ from pathlib import Path
 
 from cuda2hip_migrate import __version__
 from cuda2hip_migrate.process import ToolError
-from cuda2hip_migrate.runner import ProbeError, probe_names, run_probe
+from cuda2hip_migrate.runner import (
+    DEFAULT_SUCCESS_MARKER,
+    ProbeError,
+    probe_names,
+    run_probe,
+    run_source_file,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -25,9 +31,37 @@ def build_parser() -> argparse.ArgumentParser:
     list_parser.add_argument("--json", action="store_true", help="emit JSON")
 
     run_parser = subparsers.add_parser("run", help="translate, build and run one probe")
-    run_parser.add_argument("--probe", required=True, help="probe name without .cu")
+    source_group = run_parser.add_mutually_exclusive_group(required=True)
+    source_group.add_argument(
+        "--probe", help="packaged probe name without .cu"
+    )
+    source_group.add_argument(
+        "--source",
+        type=Path,
+        help="external CUDA source file, e.g. one cuda-samples file",
+    )
     run_parser.add_argument("--out", type=Path, help="artifact directory")
     run_parser.add_argument("--arch", help="HIP offload architecture, e.g. gfx1100")
+    run_parser.add_argument(
+        "--include-dir",
+        type=Path,
+        action="append",
+        default=[],
+        dest="include_dirs",
+        help="include directory passed to hipify-clang and hipcc (repeatable)",
+    )
+    run_parser.add_argument(
+        "--library",
+        action="append",
+        default=[],
+        dest="libraries",
+        help="library to link with hipcc as -l<name> (repeatable)",
+    )
+    run_parser.add_argument(
+        "--success-marker",
+        default=DEFAULT_SUCCESS_MARKER,
+        help=f"output marker required for C3 (default: {DEFAULT_SUCCESS_MARKER})",
+    )
     return parser
 
 
@@ -47,7 +81,17 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "run":
         try:
-            result = run_probe(args.probe, out_dir=args.out, arch=args.arch)
+            if args.source is not None:
+                result = run_source_file(
+                    args.source,
+                    out_dir=args.out,
+                    arch=args.arch,
+                    include_dirs=tuple(args.include_dirs),
+                    libraries=tuple(args.libraries),
+                    success_marker=args.success_marker,
+                )
+            else:
+                result = run_probe(args.probe, out_dir=args.out, arch=args.arch)
         except (ProbeError, ToolError) as error:
             if isinstance(error, ProbeError):
                 print(f"ERROR [{error.stage}]: {error}", file=sys.stderr)

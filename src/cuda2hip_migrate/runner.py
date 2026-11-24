@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import tempfile
 from dataclasses import dataclass
 from importlib.resources import files
@@ -25,6 +26,7 @@ PROBE_PACKAGE = "cuda2hip_migrate.probes"
 PROBE_SUFFIX = ".cu"
 BUILD_SPEC_SUFFIX = ".build.json"
 ALLOWED_BUILD_KEYS = frozenset({"libraries"})
+DEFAULT_SUCCESS_MARKER = "RESULT=PASS"
 
 
 class ProbeError(RuntimeError):
@@ -43,6 +45,7 @@ class RunResult:
     arch: str
     out_dir: Path
     changes: tuple[RuleChange, ...]
+    success_marker: str
 
 
 def probe_names() -> tuple[str, ...]:
@@ -101,8 +104,68 @@ def probe_build_flags(name: str) -> tuple[str, ...]:
     return build_flags_from_spec(name, spec)
 
 
+def source_name(source_path: Path) -> str:
+    """Derive a safe artifact name from an external source file name."""
+    name = re.sub(r"[^A-Za-z0-9_.-]", "_", Path(source_path).stem)
+    if not name or name.startswith("."):
+        raise ProbeError("source", f"cannot derive an artifact name from {source_path}")
+    return name
+
+
 def run_probe(name: str, *, out_dir: Path | None = None, arch: str | None = None) -> RunResult:
-    source_text = probe_source_text(name)
+    """Run one packaged probe with the default acceptance marker."""
+    return _run_source(
+        name,
+        probe_source_text(name),
+        out_dir=out_dir,
+        arch=arch,
+        include_dirs=(),
+        libraries=(),
+        success_marker=DEFAULT_SUCCESS_MARKER,
+    )
+
+
+def run_source_file(
+    source_path: Path,
+    *,
+    out_dir: Path | None = None,
+    arch: str | None = None,
+    include_dirs: tuple[Path, ...] = (),
+    libraries: tuple[str, ...] = (),
+    success_marker: str = DEFAULT_SUCCESS_MARKER,
+) -> RunResult:
+    """Run an external CUDA source file, for example one cuda-samples file.
+
+    The file is read and copied into the artifacts; it is never modified in
+    place. ``include_dirs`` are forwarded to ``hipify-clang`` and ``hipcc`` so a
+    sample can resolve its own helper headers.
+    """
+    path = Path(source_path)
+    if not path.is_file():
+        raise ProbeError("source", f"source file not found: {path}")
+    if not success_marker:
+        raise ProbeError("source", "success marker must not be empty")
+    return _run_source(
+        source_name(path),
+        path.read_text(encoding="utf-8"),
+        out_dir=out_dir,
+        arch=arch,
+        include_dirs=tuple(Path(directory) for directory in include_dirs),
+        libraries=tuple(libraries),
+        success_marker=success_marker,
+    )
+
+
+def _run_source(
+    name: str,
+    source_text: str,
+    *,
+    out_dir: Path | None,
+    arch: str | None,
+    include_dirs: tuple[Path, ...],
+    libraries: tuple[str, ...],
+    success_marker: str,
+) -> RunResult:
     hipify = require_tool("hipify-clang")
     hipcc = require_tool("hipcc")
     try:
@@ -125,8 +188,14 @@ def run_probe(name: str, *, out_dir: Path | None = None, arch: str | None = None
 
     logger.info("probe=%s arch=%s out=%s", name, detected_arch, artifacts)
 
+    include_flags = [f"-I{directory}" for directory in include_dirs]
+    if include_flags:
+        logger.info("[INCLUDE] %s", " ".join(include_flags))
+
     hipify_log = artifacts / "hipify.log"
-    result = run_logged([hipify, str(source), "-o", str(hipified)], hipify_log)
+    result = run_logged(
+        [hipify, str(source), *include_flags, "-o", str(hipified)], hipify_log
+    )
     if result.returncode != 0 or not hipified.is_file():
         raise ProbeError(
             "hipify",
@@ -162,7 +231,9 @@ def run_probe(name: str, *, out_dir: Path | None = None, arch: str | None = None
             artifacts=artifacts,
         )
 
-    build_flags = probe_build_flags(name)
+    build_flags = (
+        probe_build_flags(name) + tuple(f"-l{library}" for library in libraries)
+    )
     if build_flags:
         logger.info("[BUILD] flags=%s", " ".join(build_flags))
 
@@ -175,6 +246,7 @@ def run_probe(name: str, *, out_dir: Path | None = None, arch: str | None = None
             "-std=c++17",
             "-O2",
             f"--offload-arch={detected_arch}",
+            *include_flags,
             *build_flags,
             str(adapted),
             "-o",
@@ -205,10 +277,10 @@ def run_probe(name: str, *, out_dir: Path | None = None, arch: str | None = None
         logger.info("%s", line)
     logger.info("[C2] PASS")
 
-    if "RESULT=PASS" not in output:
+    if success_marker not in output:
         raise ProbeError(
             "C3",
-            "RESULT=PASS marker missing",
+            f"{success_marker} marker missing",
             tail=output,
             artifacts=artifacts,
         )
@@ -220,4 +292,5 @@ def run_probe(name: str, *, out_dir: Path | None = None, arch: str | None = None
         arch=detected_arch,
         out_dir=artifacts,
         changes=tuple(changes),
+        success_marker=success_marker,
     )

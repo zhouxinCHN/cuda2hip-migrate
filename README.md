@@ -65,6 +65,8 @@ cuda2hip-migrate run --probe probe_pinned_host_mem
 ```text
 cuda2hip-migrate list [--json]
 cuda2hip-migrate run --probe NAME [--out PATH] [--arch GFX]
+cuda2hip-migrate run --source PATH [--include-dir DIR]... [--library NAME]...
+                       [--success-marker TEXT] [--out PATH] [--arch GFX]
 ```
 
 Examples:
@@ -75,9 +77,20 @@ cuda2hip-migrate run \
   --probe probe_pinned_host_mem \
   --out /tmp/probe-pinned \
   --arch gfx1100
+cuda2hip-migrate run \
+  --source third-party/cuda-samples/Samples/0_Introduction/vectorAdd/vectorAdd.cu \
+  --include-dir third-party/cuda-samples/Common \
+  --success-marker "Test PASSED" \
+  --out /tmp/vecadd
 ```
 
 The architecture is taken from `--arch`, then `HIP_ARCH`, then `rocminfo`.
+
+`--source` runs an external CUDA file, such as one cuda-samples file, through
+the same pipeline. The file is copied into `source/` and never modified.
+`--include-dir` is forwarded to both `hipify-clang` and `hipcc`; `--library`
+adds `-l<name>`; `--success-marker` replaces the C3 marker for that run only.
+Packaged probes keep `RESULT=PASS` as the required marker.
 
 ## Probes
 
@@ -93,6 +106,25 @@ The architecture is taken from `--arch`, then `HIP_ARCH`, then `rocminfo`.
 
 Planned probes are listed in the parent migration plan, not added ahead of
 review. Add one probe at a time and stop for review before continuing.
+
+## cuda-samples v12.0
+
+An external cuda-samples checkout is used for adaptation evidence and is
+excluded from this repository (`third-party/` in `.gitignore`); the checkout is
+a nested Git repository, so only evidence and commands are committed.
+
+| Sample | Source (v12.0) | Status | Rules |
+|---|---|---|---|
+| `vectorAdd` | `Samples/0_Introduction/vectorAdd` | HIPIFY direct, C1/C2/C3 | 0 |
+
+```bash
+make sample-vectoradd
+```
+
+See [`docs/evidence/cuda_samples_12_0/vectorAdd.md`](docs/evidence/cuda_samples_12_0/vectorAdd.md).
+One sample is not evidence of general cuda-samples support: samples that use
+`Common/` helpers beyond an include, sample Makefiles/CMake projects, data files
+and multiple source files are not covered yet.
 
 ## Rules
 

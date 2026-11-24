@@ -25,6 +25,17 @@ class CliTests(unittest.TestCase):
     def test_unknown_probe_returns_failure(self) -> None:
         self.assertEqual(main(["run", "--probe", "does_not_exist"]), 1)
 
+    def test_missing_source_returns_failure(self) -> None:
+        self.assertEqual(main(["run", "--source", "does_not_exist.cu"]), 1)
+
+    def test_probe_and_source_are_mutually_exclusive(self) -> None:
+        with self.assertRaises(SystemExit):
+            main(["run", "--probe", "probe_malloc_memcpy", "--source", "x.cu"])
+
+    def test_source_or_probe_is_required(self) -> None:
+        with self.assertRaises(SystemExit):
+            main(["run"])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

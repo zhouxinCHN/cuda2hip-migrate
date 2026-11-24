@@ -10,3 +10,4 @@ dist/
 .mypy_cache/
 artifacts/
 AGENTS.md
+third-party/

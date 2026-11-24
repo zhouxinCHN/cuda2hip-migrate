@@ -14,8 +14,33 @@ repository:
 - The probe must not depend on a sample Makefile or CMake build.
 - Process one probe at a time and stop for review before adding the next one.
 
+The same pipeline also runs an external CUDA file with `--source`, which is how
+cuda-samples v12.0 samples are adapted (`make sample-vectoradd`). The external
+file is copied into `source/` and never modified; the checkout stays outside the
+repository (`third-party/` is ignored).
+
 Do not extrapolate this workflow into a claim that all cuda-samples or customer
 projects can be migrated automatically.
+
+## External sample mode
+
+```bash
+cuda2hip-migrate run \
+  --source <checkout>/Samples/<path>/<sample>.cu \
+  --include-dir <checkout>/Common \
+  --success-marker "Test PASSED"
+```
+
+- `--include-dir` is needed for HIPIFY to resolve sample helper includes; pass it
+  to both `hipify-clang` and `hipcc`.
+- `--library` adds `-l<name>` for library-layer samples.
+- `--success-marker` is per run. Use the sample's own success line instead of
+  editing the sample; never lower C2 (exit status) to compensate.
+- Record the tag, commit, command and transcript in `docs/evidence/`.
+- A sample that only *includes* `helper_cuda.h` may be direct because HIPIFY maps
+  it to `hip/hip_runtime_api.h`. A sample that *calls* helper functions
+  (`checkCudaErrors`, `findCudaDevice`, `sdkGetTimerValue`, ...) must be measured
+  separately; do not assume it behaves the same.
 
 ## Pipeline
 
@@ -42,6 +67,12 @@ new rule or human review.
 | `probe_kernel_dynamic_smem` | HIPIFY direct | 0 |
 | `probe_cublas_gemm` | rule-fixed + link flag | `HIP-CUBLAS-INCLUDE-001` |
 | `probe_texture_object` | HIPIFY direct | 0 |
+
+External cuda-samples v12.0 status:
+
+| Sample | Status | Rules |
+|---|---|---|
+| `vectorAdd` | HIPIFY direct, C1/C2/C3 via `--source` | 0 |
 
 Implemented rule:
 

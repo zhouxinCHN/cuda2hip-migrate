@@ -1,7 +1,11 @@
 PYTHON ?= python3
 export PYTHONPATH := $(CURDIR)/src
 
-.PHONY: all test list probe-malloc probe-pinned probe-stream probe-managed probe-smem probe-cublas probe-texture probes install build clean
+SAMPLES ?= third-party/cuda-samples
+VECTORADD_SOURCE ?= $(SAMPLES)/Samples/0_Introduction/vectorAdd/vectorAdd.cu
+SAMPLES_COMMON ?= $(SAMPLES)/Common
+
+.PHONY: all test list probe-malloc probe-pinned probe-stream probe-managed probe-smem probe-cublas probe-texture probes sample-vectoradd install build clean
 
 all: test
 
@@ -33,6 +37,12 @@ probe-texture:
 	$(PYTHON) -m cuda2hip_migrate run --probe probe_texture_object
 
 probes: probe-malloc probe-pinned probe-stream probe-managed probe-smem probe-cublas probe-texture
+
+sample-vectoradd:
+	$(PYTHON) -m cuda2hip_migrate run \
+		--source $(VECTORADD_SOURCE) \
+		--include-dir $(SAMPLES_COMMON) \
+		--success-marker "Test PASSED"
 
 install:
 	$(PYTHON) -m pip install -e .
