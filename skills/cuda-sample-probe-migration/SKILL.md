@@ -37,6 +37,7 @@ new rule or human review.
 |---|---|---|
 | `probe_malloc_memcpy` | HIPIFY direct | 0 |
 | `probe_pinned_host_mem` | rule-fixed | `HIP-HOSTMALLOC-ARITY-001` |
+| `probe_stream_event` | HIPIFY direct | 0 |
 
 Implemented rule:
 

@@ -12,7 +12,20 @@ class ProbeDiscoveryTests(unittest.TestCase):
         names = probe_names()
         self.assertIn("probe_malloc_memcpy", names)
         self.assertIn("probe_pinned_host_mem", names)
+        self.assertIn("probe_stream_event", names)
         self.assertEqual(names, tuple(sorted(names)))
+
+    def test_stream_probe_covers_streams_and_events(self) -> None:
+        source = probe_source_text("probe_stream_event")
+        for symbol in (
+            "cudaStreamCreate",
+            "cudaStreamWaitEvent",
+            "cudaEventRecord",
+            "cudaEventSynchronize",
+            "cudaMemcpyAsync",
+        ):
+            self.assertIn(symbol, source)
+        self.assertIn("RESULT=PASS", source)
 
     def test_probe_source_is_non_empty_cuda(self) -> None:
         source = probe_source_text("probe_pinned_host_mem")

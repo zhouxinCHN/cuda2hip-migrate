@@ -1,7 +1,7 @@
 PYTHON ?= python3
 export PYTHONPATH := $(CURDIR)/src
 
-.PHONY: all test list probe-malloc probe-pinned probes install build clean
+.PHONY: all test list probe-malloc probe-pinned probe-stream probes install build clean
 
 all: test
 
@@ -17,7 +17,10 @@ probe-malloc:
 probe-pinned:
 	$(PYTHON) -m cuda2hip_migrate run --probe probe_pinned_host_mem
 
-probes: probe-malloc probe-pinned
+probe-stream:
+	$(PYTHON) -m cuda2hip_migrate run --probe probe_stream_event
+
+probes: probe-malloc probe-pinned probe-stream
 
 install:
 	$(PYTHON) -m pip install -e .
