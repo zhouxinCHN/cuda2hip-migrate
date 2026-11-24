@@ -26,6 +26,15 @@
 
 #include "cuda_samples_compat/argparse.h"
 
+// NVIDIA's helper_cuda.h includes the CPU-only helper_string.h and defines
+// EXIT_WAIVED itself; keep both surfaces so samples that rely on them compile
+// unchanged. helper_string.h keeps coming from the original Common checkout.
+#include <helper_string.h>
+
+#ifndef EXIT_WAIVED
+#define EXIT_WAIVED 2
+#endif
+
 #if defined(__HIPCC__) || defined(__HIP__)
 
 #include <hip/hip_runtime.h>

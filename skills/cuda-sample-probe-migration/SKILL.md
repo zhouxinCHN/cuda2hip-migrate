@@ -98,6 +98,7 @@ External cuda-samples v12.0 status:
 |---|---|---|
 | `vectorAdd` | smoke only: helper include mapped away, no helper called | 0 |
 | `simpleOccupancy` | overlay used, C1/C2/C3 at `-O0` (sample `int` overflow at `-O2`) | 0 |
+| `fp16ScalarProduct` | overlay's `findCudaDevice` runs to C3; quoted includes; `half2` math | 0 |
 | `matrixMul` | blocked at C2: `hipProfilerStart` returns 801 | 0 |
 
 Implemented rule:

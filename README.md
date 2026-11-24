@@ -119,11 +119,13 @@ committed.
 |---|---|---|---|
 | `vectorAdd` | external-source path only; HIPIFY maps its helper include away and the sample calls no helper | HIPIFY direct, C1/C2/C3 (`smoke-vectoradd`) | 0 |
 | `simpleOccupancy` | Common overlay is used and `checkCudaErrors` runs; built `-O0` because the sample's own `i * i` overflows `int` | HIPIFY direct + overlay, C1/C2/C3 | 0 |
+| `fp16ScalarProduct` | overlay's `findCudaDevice` runs to completion; quoted includes; `half2` intrinsics vs native | HIPIFY direct + overlay, C1/C2/C3 | 0 |
 | `matrixMul` | overlay compiles and `findCudaDevice` runs; `hipProfilerStart` returns 801 on this platform | **blocked** at C2 | 0 |
 
 ```bash
 make smoke-vectoradd
 make sample-simpleoccupancy
+make sample-fp16scalarproduct
 make sample-matrixmul
 ```
 
