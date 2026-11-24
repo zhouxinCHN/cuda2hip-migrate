@@ -14,7 +14,14 @@ class ProbeDiscoveryTests(unittest.TestCase):
         self.assertIn("probe_pinned_host_mem", names)
         self.assertIn("probe_stream_event", names)
         self.assertIn("probe_managed_memory", names)
+        self.assertIn("probe_kernel_dynamic_smem", names)
         self.assertEqual(names, tuple(sorted(names)))
+
+    def test_dynamic_smem_probe_uses_extern_shared(self) -> None:
+        source = probe_source_text("probe_kernel_dynamic_smem")
+        self.assertIn("extern __shared__", source)
+        self.assertIn("__syncthreads", source)
+        self.assertIn("RESULT=PASS", source)
 
     def test_managed_memory_probe_uses_managed_allocation(self) -> None:
         source = probe_source_text("probe_managed_memory")

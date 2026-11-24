@@ -39,6 +39,7 @@ new rule or human review.
 | `probe_pinned_host_mem` | rule-fixed | `HIP-HOSTMALLOC-ARITY-001` |
 | `probe_stream_event` | HIPIFY direct | 0 |
 | `probe_managed_memory` | HIPIFY direct | 0 |
+| `probe_kernel_dynamic_smem` | HIPIFY direct | 0 |
 
 Implemented rule:
 
