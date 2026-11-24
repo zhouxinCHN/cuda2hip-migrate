@@ -1,0 +1,14 @@
+{
+  "sample": "cuda-samples-v12.0/matrixMul",
+  "source": "third-party/cuda-samples/Samples/0_Introduction/matrixMul/matrixMul.cu",
+  "include_dirs": [
+    "compat/cuda-samples-v12.0/include",
+    "third-party/cuda-samples/Common"
+  ],
+  "libraries": [],
+  "success_marker": "Test PASSED",
+  "expected": "hipify-direct",
+  "include_redirects": {
+    "helper_cuda.h": "cuda_samples_compat/helper_cuda.h"
+  }
+}

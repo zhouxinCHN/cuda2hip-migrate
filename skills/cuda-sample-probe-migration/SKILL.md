@@ -15,8 +15,9 @@ repository:
 - Process one probe at a time and stop for review before adding the next one.
 
 The same pipeline also runs an external CUDA file with `--source`, which is how
-cuda-samples v12.0 samples are adapted (`make sample-vectoradd`). The external
-file is copied into `source/` and never modified; the checkout stays outside the
+cuda-samples v12.0 samples are adapted through committed specs under
+`samples/cuda-samples-v12.0/` (`make sample-simpleoccupancy`). The external file
+is copied into `source/` and never modified; the checkout stays outside the
 repository (`third-party/` is ignored).
 
 Do not extrapolate this workflow into a claim that all cuda-samples or customer
@@ -25,22 +26,35 @@ projects can be migrated automatically.
 ## External sample mode
 
 ```bash
-cuda2hip-migrate run \
-  --source <checkout>/Samples/<path>/<sample>.cu \
-  --include-dir <checkout>/Common \
-  --success-marker "Test PASSED"
+cuda2hip-migrate run --spec samples/cuda-samples-v12.0/<sample>.json
 ```
 
-- `--include-dir` is needed for HIPIFY to resolve sample helper includes; pass it
-  to both `hipify-clang` and `hipcc`.
-- `--library` adds `-l<name>` for library-layer samples.
-- `--success-marker` is per run. Use the sample's own success line instead of
-  editing the sample; never lower C2 (exit status) to compensate.
-- Record the tag, commit, command and transcript in `docs/evidence/`.
-- A sample that only *includes* `helper_cuda.h` may be direct because HIPIFY maps
-  it to `hip/hip_runtime_api.h`. A sample that *calls* helper functions
-  (`checkCudaErrors`, `findCudaDevice`, `sdkGetTimerValue`, ...) must be measured
-  separately; do not assume it behaves the same.
+A spec pins source path, `include_dirs`, `libraries`, `success_marker`,
+`expected` (`hipify-direct` / `rule-required` / `unknown`), `optimization`
+(`-O0`..`-O3`, default `-O2`) and `include_redirects`. `expected` is enforced:
+declaring `hipify-direct` fails the run if a rule fires.
+
+Ad-hoc runs still support `--source PATH --include-dir DIR --library NAME
+--success-marker TEXT`.
+
+Rules for sample adaptation:
+
+- `-I`/`--include-dir` is header lookup, **not** helper migration. HIPIFY maps
+  `helper_cuda.h` to `<hip/hip_runtime_api.h>`, so a sample that only includes it
+  proves nothing about Common helpers.
+- A sample that *calls* `checkCudaErrors`, `findCudaDevice`, `sdkGetTimerValue`
+  or similar needs the overlay plus a pre-HIPIFY include redirect; measure it,
+  never assume it.
+- Redirect before HIPIFY, never reverse a post-HIPIFY `<hip/hip_runtime_api.h>`
+  back to a helper header: the two cannot be distinguished.
+- Never edit the sample to make it pass. If a sample's own check fails for a
+  sample-level reason (e.g. signed overflow), record it and use an explicit,
+  logged build setting such as `optimization: "-O0"` rather than weakening C2/C3.
+- Use the sample's own success line as `success_marker`; never lower C2.
+- Record tag, commit, command, transcript and boundaries in `docs/evidence/`.
+- A blocked sample is `blocked`, not `supported`. If a HIP API returns
+  `hipErrorNotSupported`, report it; do not silence it with a no-op rule without
+  an explicit decision.
 
 ## Pipeline
 
@@ -72,7 +86,9 @@ External cuda-samples v12.0 status:
 
 | Sample | Status | Rules |
 |---|---|---|
-| `vectorAdd` | HIPIFY direct, C1/C2/C3 via `--source` | 0 |
+| `vectorAdd` | smoke only: helper include mapped away, no helper called | 0 |
+| `simpleOccupancy` | overlay used, C1/C2/C3 at `-O0` (sample `int` overflow at `-O2`) | 0 |
+| `matrixMul` | blocked at C2: `hipProfilerStart` returns 801 | 0 |
 
 Implemented rule:
 

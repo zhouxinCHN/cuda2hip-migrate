@@ -1,11 +1,7 @@
 PYTHON ?= python3
 export PYTHONPATH := $(CURDIR)/src
 
-SAMPLES ?= third-party/cuda-samples
-VECTORADD_SOURCE ?= $(SAMPLES)/Samples/0_Introduction/vectorAdd/vectorAdd.cu
-SAMPLES_COMMON ?= $(SAMPLES)/Common
-
-.PHONY: all test list probe-malloc probe-pinned probe-stream probe-managed probe-smem probe-cublas probe-texture probes sample-vectoradd install build clean
+.PHONY: all test list probe-malloc probe-pinned probe-stream probe-managed probe-smem probe-cublas probe-texture probes smoke-vectoradd sample-simpleoccupancy sample-matrixmul install build clean
 
 all: test
 
@@ -38,11 +34,17 @@ probe-texture:
 
 probes: probe-malloc probe-pinned probe-stream probe-managed probe-smem probe-cublas probe-texture
 
-sample-vectoradd:
-	$(PYTHON) -m cuda2hip_migrate run \
-		--source $(VECTORADD_SOURCE) \
-		--include-dir $(SAMPLES_COMMON) \
-		--success-marker "Test PASSED"
+# Smoke test of the external-source path: HIPIFY maps vectorAdd's helper
+# include away and the sample calls no helper function, so this says nothing
+# about Common helper support.
+smoke-vectoradd:
+	$(PYTHON) -m cuda2hip_migrate run --spec samples/cuda-samples-v12.0/vectorAdd.json
+
+sample-simpleoccupancy:
+	$(PYTHON) -m cuda2hip_migrate run --spec samples/cuda-samples-v12.0/simpleOccupancy.json
+
+sample-matrixmul:
+	$(PYTHON) -m cuda2hip_migrate run --spec samples/cuda-samples-v12.0/matrixMul.json
 
 install:
 	$(PYTHON) -m pip install -e .

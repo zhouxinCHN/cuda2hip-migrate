@@ -15,6 +15,7 @@ from cuda2hip_migrate.runner import (
     ProbeError,
     probe_names,
     run_probe,
+    run_sample_spec,
     run_source_file,
 )
 
@@ -39,6 +40,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--source",
         type=Path,
         help="external CUDA source file, e.g. one cuda-samples file",
+    )
+    source_group.add_argument(
+        "--spec",
+        type=Path,
+        help="committed sample spec file describing source, includes and marker",
     )
     run_parser.add_argument("--out", type=Path, help="artifact directory")
     run_parser.add_argument("--arch", help="HIP offload architecture, e.g. gfx1100")
@@ -81,7 +87,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "run":
         try:
-            if args.source is not None:
+            if args.spec is not None:
+                result = run_sample_spec(args.spec, out_dir=args.out, arch=args.arch)
+            elif args.source is not None:
                 result = run_source_file(
                     args.source,
                     out_dir=args.out,

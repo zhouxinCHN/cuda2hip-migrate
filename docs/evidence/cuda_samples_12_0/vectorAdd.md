@@ -1,80 +1,59 @@
-# cuda-samples v12.0 / vectorAdd: HIPIFY-direct evidence
+# cuda-samples v12.0 / vectorAdd: external-path smoke test
 
-Date: 2026-11-24
+Date: 2026-11-24 (revised)
 
 Environment: ROCm 7.2.4, hipify-clang 22.0.0git, hipcc, gfx1100
 
-Sample origin: `third-party/cuda-samples` (git tag `v12.0`, commit
-`2b689228b746248b7bb7d2778d5ea0701669f7d3`, "Updating samples for 12.0"). The
-checkout is a nested Git repository and is excluded from this repository via
-`.gitignore`; only this evidence and the runner invocation are committed.
+Sample origin: `third-party/cuda-samples`, git tag `v12.0`, commit
+`2b689228b746248b7bb7d2778d5ea0701669f7d3`. The checkout is a nested Git
+repository and is excluded from this repository via `.gitignore`.
 
-## Sample
+## What this sample does and does not prove
 
-`Samples/0_Introduction/vectorAdd/vectorAdd.cu`, unmodified: 50 000-element
-float vector addition, one kernel launch, host-side verification and
-`Test PASSED` on success.
+It proves the external-source path works: an unmodified sample is copied,
+translated, built and run, and its own success line is checked.
+
+It does **not** prove cuda-samples `Common` helper support. HIPIFY rewrites
+
+```text
+#include <helper_cuda.h>  ->  #include <hip/hip_runtime_api.h>
+```
+
+so the NVIDIA helper header never reaches the compiler, and this sample calls no
+helper function (`checkCudaErrors`, `findCudaDevice`, timing helpers) at all.
+The include is resolvable only because `-I <checkout>/Common` is passed to
+`hipify-clang`. The helper migration path is therefore untested here; see
+`simpleOccupancy.md` for the sample that actually exercises the overlay.
+
+The Makefile target is named `smoke-vectoradd` for this reason.
 
 ## Command
 
 ```bash
-cuda2hip-migrate run \
-  --source third-party/cuda-samples/Samples/0_Introduction/vectorAdd/vectorAdd.cu \
-  --include-dir third-party/cuda-samples/Common \
-  --success-marker "Test PASSED" \
-  --out /tmp/vecadd
+cuda2hip-migrate run --spec samples/cuda-samples-v12.0/vectorAdd.json
 ```
 
-`--include-dir` is required because the sample includes `<helper_cuda.h>` and
-`hipify-clang` must be able to resolve it; without the include directory HIPIFY
-fails with `'helper_cuda.h' file not found`.
+Spec content: source, `include_dirs` (`third-party/cuda-samples/Common`),
+`success_marker` (`Test PASSED`), `expected: hipify-direct`, no redirects.
 
-## Translation result
-
-`hipify-clang` exit 0, no rule hits. Two points are worth recording:
-
-```text
-#include <cuda_runtime.h>  ->  #include <hip/hip_runtime.h>
-#include <helper_cuda.h>   ->  #include <hip/hip_runtime_api.h>
-```
-
-HIPIFY maps the NVIDIA helper header to a HIP runtime header, so the CUDA
-Samples helper dependency disappears from the translated source. `cudaMalloc`,
-`cudaMemcpy`, `cudaFree`, `cudaGetLastError`, `cudaGetErrorString` and the
-default-stream kernel launch are translated one-to-one.
-
-## Acceptance
+## Translation and acceptance
 
 ```text
 [RULES] applied=0
+[EXPECTED] hipify-direct rules=0
 [C1] PASS
 [Vector addition of 50000 elements]
-Copy input data from the host memory to the CUDA device
-CUDA kernel launch with 196 blocks of 256 threads
-Copy output data from the CUDA device to the host memory
 Test PASSED
 Done
 [C2] PASS
 [C3] PASS
 ```
 
-C3 uses the sample's own marker (`Test PASSED`) through `--success-marker`. The
-marker is per-run configuration; the default stays `RESULT=PASS`, so packaged
-probes are unaffected and the acceptance threshold is not lowered.
-
-The archived `source/vectorAdd.cu` is byte-identical to the file in the
-cuda-samples checkout, and `rules.json` is `[]`.
+`source/vectorAdd.cu` is byte-identical to the checkout file and `rules.json` is
+`[]`.
 
 ## Boundaries
 
-- One sample out of the cuda-samples v12.0 set. No general cuda-samples support
-  is claimed, and other samples are unclassified until they are run.
-- The sample is not built through its own Makefile or CMake project; the runner
-  invokes `hipcc` directly, so the sample's build flags are not exercised.
-  `helper_cuda.h` maps to a HIP header here only because this sample does not
-  call helper functions. Samples that call `checkCudaErrors`,
-  `findCudaDevice`, `sdkGetTimerValue` or similar helpers are expected to
-  behave differently and must be measured, not assumed.
-- Only the default stream and one launch configuration are covered.
-- The sample's own tolerance (`1e-5`) is reused; performance is out of scope.
-- ROCm 10.0 is not validated.
+- One sample, default stream, single launch, no helper call.
+- No sample build system is used; `hipcc` is invoked directly by the runner.
+- Not evidence of Common helper support, of other samples, or of ROCm 10.0.

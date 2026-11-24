@@ -65,6 +65,7 @@ cuda2hip-migrate run --probe probe_pinned_host_mem
 ```text
 cuda2hip-migrate list [--json]
 cuda2hip-migrate run --probe NAME [--out PATH] [--arch GFX]
+cuda2hip-migrate run --spec PATH [--out PATH] [--arch GFX]
 cuda2hip-migrate run --source PATH [--include-dir DIR]... [--library NAME]...
                        [--success-marker TEXT] [--out PATH] [--arch GFX]
 ```
@@ -111,20 +112,65 @@ review. Add one probe at a time and stop for review before continuing.
 
 An external cuda-samples checkout is used for adaptation evidence and is
 excluded from this repository (`third-party/` in `.gitignore`); the checkout is
-a nested Git repository, so only evidence and commands are committed.
+a nested Git repository, so only specs, overlay headers and evidence are
+committed.
 
-| Sample | Source (v12.0) | Status | Rules |
+| Sample | What it establishes | Status | Rules |
 |---|---|---|---|
-| `vectorAdd` | `Samples/0_Introduction/vectorAdd` | HIPIFY direct, C1/C2/C3 | 0 |
+| `vectorAdd` | external-source path only; HIPIFY maps its helper include away and the sample calls no helper | HIPIFY direct, C1/C2/C3 (`smoke-vectoradd`) | 0 |
+| `simpleOccupancy` | Common overlay is used and `checkCudaErrors` runs; built `-O0` because the sample's own `i * i` overflows `int` | HIPIFY direct + overlay, C1/C2/C3 | 0 |
+| `matrixMul` | overlay compiles and `findCudaDevice` runs; `hipProfilerStart` returns 801 on this platform | **blocked** at C2 | 0 |
 
 ```bash
-make sample-vectoradd
+make smoke-vectoradd
+make sample-simpleoccupancy
+make sample-matrixmul
 ```
 
-See [`docs/evidence/cuda_samples_12_0/vectorAdd.md`](docs/evidence/cuda_samples_12_0/vectorAdd.md).
-One sample is not evidence of general cuda-samples support: samples that use
-`Common/` helpers beyond an include, sample Makefiles/CMake projects, data files
-and multiple source files are not covered yet.
+Each sample has a committed spec under `samples/cuda-samples-v12.0/`:
+
+```json
+{
+  "sample": "cuda-samples-v12.0/simpleOccupancy",
+  "source": "third-party/cuda-samples/Samples/0_Introduction/simpleOccupancy/simpleOccupancy.cu",
+  "include_dirs": ["compat/cuda-samples-v12.0/include", "third-party/cuda-samples/Common"],
+  "libraries": [],
+  "success_marker": "Test PASSED",
+  "expected": "hipify-direct",
+  "optimization": "-O0",
+  "include_redirects": {"helper_cuda.h": "cuda_samples_compat/helper_cuda.h"}
+}
+```
+
+`expected` is enforced: a spec declaring `hipify-direct` fails if any rule fires.
+`optimization` defaults to `-O2` and is logged when overridden.
+
+### Common helper overlay
+
+`-I <checkout>/Common` only makes headers findable; it does not migrate them, and
+HIPIFY rewrites `helper_cuda.h` to a HIP runtime header. Samples that actually
+call helpers therefore need an overlay plus a pre-HIPIFY redirect:
+
+```text
+compat/cuda-samples-v12.0/include/cuda_samples_compat/helper_cuda.h
+  implemented: checkCudaErrors, findCudaDevice
+  not implemented: gpuGetMaxGflopsDeviceId selection, compute-capability gates,
+                   driver API helpers, image/GL/NVIDIA-library helpers
+```
+
+The redirect rewrites `#include <helper_cuda.h>` in the copied source before
+HIPIFY, is recorded in `redirects.json`, and warns with `[REDIRECT-MISS]` when a
+declared redirect matches nothing. The original checkout is never edited and the
+CPU-only Common headers keep coming from it.
+
+Evidence: [`common_overlay.md`](docs/evidence/cuda_samples_12_0/common_overlay.md),
+[`vectorAdd.md`](docs/evidence/cuda_samples_12_0/vectorAdd.md),
+[`simpleOccupancy.md`](docs/evidence/cuda_samples_12_0/simpleOccupancy.md),
+[`matrixMul.md`](docs/evidence/cuda_samples_12_0/matrixMul.md).
+
+Do not claim cuda-samples or `Common` support beyond the rows above. Sample
+Makefiles/CMake projects, data files, multi-file samples, unimplemented helpers
+and other samples are unclassified.
 
 ## Rules
 
@@ -182,15 +228,17 @@ Each run creates:
 
 ```text
 <out>/
-|-- source/<probe>.cu          # original packaged CUDA source
-|-- hipified/<probe>.hip.cu    # untouched HIPIFY output
-|-- adapted/<probe>.hip.cu     # rules applied; built source
-|-- hipify.diff                # original -> HIPIFY, audit only
+|-- source/<name>.cu           # original source, byte-identical copy
+|-- preprocessed/<name>.cu     # only with include redirects; HIPIFY input
+|-- redirects.json             # only with include redirects
+|-- hipified/<name>.hip.cu     # untouched HIPIFY output
+|-- adapted/<name>.hip.cu      # rules applied; built source
+|-- hipify.diff                # HIPIFY input -> HIPIFY output, audit only
 |-- rules.json                 # rule hits
 |-- hipify.log
 |-- build.log
 |-- run.log
-`-- <probe>                    # executable
+`-- <name>                     # executable
 ```
 
 Generated artifacts are written to `/tmp` by default and are not committed.
@@ -204,6 +252,8 @@ cuda2hip-migrate/
 |-- Makefile
 |-- README.md
 |-- .gitignore
+|-- compat/cuda-samples-v12.0/ # Common helper overlay (HIP headers)
+|-- samples/cuda-samples-v12.0/ # committed sample specs
 |-- docs/evidence/             # curated evidence, committed
 |-- skills/                    # Agent workflow documentation, committed
 |-- src/cuda2hip_migrate/
@@ -238,6 +288,8 @@ probe commands and must be recorded separately.
 ## Known boundaries
 
 - Only two deterministic rules are implemented.
+- No cuda-samples or `Common` helper support is claimed beyond the sample table
+  above; `matrixMul` is blocked by `hipProfilerStart` on the validated platform.
 - ROCm 10.0 has not been validated.
 - `hipify-clang` may print `ptxas`/`nvlink` architecture diagnostics while still
   exiting successfully and producing valid output; the runner trusts the exit
