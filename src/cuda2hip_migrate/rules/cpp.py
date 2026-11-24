@@ -84,6 +84,62 @@ def parse_call(text: str, open_index: int) -> tuple[int, list[str]] | None:
     return None
 
 
+def find_directives(text: str) -> list[tuple[int, int, str]]:
+    """Find ``#`` directives that start a line outside comments and literals.
+
+    Returns tuples of (start, end, directive_text) where ``end`` is the index of
+    the terminating newline (or the end of the text).
+    """
+    directives: list[tuple[int, int, str]] = []
+    index = 0
+    length = len(text)
+    at_line_start = True
+
+    while index < length:
+        ch = text[index]
+        following = text[index + 1] if index + 1 < length else ""
+
+        if ch == "\n":
+            at_line_start = True
+            index += 1
+            continue
+        if ch == "/" and following == "/":
+            newline = text.find("\n", index + 2)
+            index = length if newline < 0 else newline
+            continue
+        if ch == "/" and following == "*":
+            end = text.find("*/", index + 2)
+            index = length if end < 0 else end + 2
+            continue
+        if ch in ('"', "'"):
+            quote = ch
+            index += 1
+            while index < length:
+                if text[index] == "\\":
+                    index += 2
+                    continue
+                if text[index] == quote:
+                    index += 1
+                    break
+                index += 1
+            at_line_start = False
+            continue
+        if ch == "#" and at_line_start:
+            end = text.find("\n", index)
+            end = length if end < 0 else end
+            directives.append((index, end, text[index:end]))
+            index = end
+            continue
+        if ch.isspace():
+            index += 1
+            continue
+
+        at_line_start = False
+        index += 1
+
+    return directives
+
+
 def find_calls(text: str, target: str) -> list[tuple[int, int, int, list[str]]]:
     """Find ``target(...)`` calls outside comments and literals.
 

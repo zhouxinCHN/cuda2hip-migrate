@@ -15,7 +15,14 @@ class ProbeDiscoveryTests(unittest.TestCase):
         self.assertIn("probe_stream_event", names)
         self.assertIn("probe_managed_memory", names)
         self.assertIn("probe_kernel_dynamic_smem", names)
+        self.assertIn("probe_cublas_gemm", names)
         self.assertEqual(names, tuple(sorted(names)))
+
+    def test_cublas_probe_uses_library_call(self) -> None:
+        source = probe_source_text("probe_cublas_gemm")
+        self.assertIn("cublasSgemm", source)
+        self.assertIn("cublasCreate", source)
+        self.assertIn("RESULT=PASS", source)
 
     def test_dynamic_smem_probe_uses_extern_shared(self) -> None:
         source = probe_source_text("probe_kernel_dynamic_smem")

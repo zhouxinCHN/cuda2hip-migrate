@@ -40,6 +40,7 @@ new rule or human review.
 | `probe_stream_event` | HIPIFY direct | 0 |
 | `probe_managed_memory` | HIPIFY direct | 0 |
 | `probe_kernel_dynamic_smem` | HIPIFY direct | 0 |
+| `probe_cublas_gemm` | rule-fixed + link flag | `HIP-CUBLAS-INCLUDE-001` |
 
 Implemented rule:
 
@@ -48,6 +49,11 @@ HIP-HOSTMALLOC-ARITY-001
 Condition: hipHostMalloc has four arguments; argument 3 is 0 and argument 4 is
            hipHostMallocDefault
 Action: remove argument 3
+
+HIP-CUBLAS-INCLUDE-001
+Condition: line-start #include directive, outside comments and literals, that is
+           exactly "#include <hipblas.h>"
+Action: rewrite to "#include <hipblas/hipblas.h>"
 ```
 
 Pre-rule failure evidence:
@@ -58,6 +64,23 @@ requires at most 3 arguments, but 4 were provided
 ```
 
 See `docs/evidence/probe_pinned_host_mem_pre_rule.md`.
+
+`probe_cublas_gemm` adds a second pre-rule failure: HIPIFY emits
+`#include <hipblas.h>` while ROCm 7.2.4 ships `hipblas/hipblas.h`, and the
+library must be linked. See
+`docs/evidence/probe_cublas_gemm_pre_rule.md`.
+
+## Build specs
+
+A probe that needs a library ships `probes/<probe>.build.json`:
+
+```json
+{"libraries": ["hipblas"]}
+```
+
+The runner turns each entry into `-l<name>` for that probe only. Do not add
+global link flags for a single probe, and do not edit the original CUDA probe to
+work around a link failure.
 
 ## Standard workflow
 

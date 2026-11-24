@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from . import hostmalloc
+from . import cublas, hostmalloc
 from .base import RuleChange
 
 Rule = Callable[[str], tuple[str, list[RuleChange]]]
 
-RULES: tuple[Rule, ...] = (hostmalloc.apply,)
+RULES: tuple[Rule, ...] = (cublas.apply, hostmalloc.apply)
 
 __all__ = ["RULES", "RuleChange", "apply_post_hipify_rules"]
 

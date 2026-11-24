@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 PROBE_PACKAGE = "cuda2hip_migrate.probes"
 PROBE_SUFFIX = ".cu"
+BUILD_SPEC_SUFFIX = ".build.json"
+ALLOWED_BUILD_KEYS = frozenset({"libraries"})
 
 
 class ProbeError(RuntimeError):
@@ -65,6 +67,38 @@ def materialize_probe(name: str, destination: Path) -> Path:
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(probe_source_text(name), encoding="utf-8")
     return destination
+
+
+def build_flags_from_spec(probe: str, spec: object) -> tuple[str, ...]:
+    """Validate one probe build-spec object and return hipcc link flags."""
+    if not isinstance(spec, dict):
+        raise ProbeError("build-spec", f"{probe}: build spec must be a JSON object")
+    unknown = set(spec) - ALLOWED_BUILD_KEYS
+    if unknown:
+        names = ", ".join(sorted(str(key) for key in unknown))
+        raise ProbeError("build-spec", f"{probe}: unsupported build spec key(s): {names}")
+    libraries = spec.get("libraries", [])
+    if not isinstance(libraries, list) or not all(
+        isinstance(library, str) and library for library in libraries
+    ):
+        raise ProbeError("build-spec", f"{probe}: 'libraries' must be a list of names")
+    return tuple(f"-l{library}" for library in libraries)
+
+
+def probe_build_flags(name: str) -> tuple[str, ...]:
+    """Return extra hipcc flags declared by the probe's optional build spec.
+
+    A probe without ``<probe>.build.json`` gets no extra flags, so existing
+    probes keep the plain build command.
+    """
+    spec_resource = files(PROBE_PACKAGE).joinpath(name + BUILD_SPEC_SUFFIX)
+    if not spec_resource.is_file():
+        return ()
+    try:
+        spec = json.loads(spec_resource.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        raise ProbeError("build-spec", f"{name}: invalid build spec JSON: {error}") from error
+    return build_flags_from_spec(name, spec)
 
 
 def run_probe(name: str, *, out_dir: Path | None = None, arch: str | None = None) -> RunResult:
@@ -128,6 +162,10 @@ def run_probe(name: str, *, out_dir: Path | None = None, arch: str | None = None
             artifacts=artifacts,
         )
 
+    build_flags = probe_build_flags(name)
+    if build_flags:
+        logger.info("[BUILD] flags=%s", " ".join(build_flags))
+
     build_log = artifacts / "build.log"
     result = run_logged(
         [
@@ -137,6 +175,7 @@ def run_probe(name: str, *, out_dir: Path | None = None, arch: str | None = None
             "-std=c++17",
             "-O2",
             f"--offload-arch={detected_arch}",
+            *build_flags,
             str(adapted),
             "-o",
             str(binary),

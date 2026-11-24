@@ -46,6 +46,7 @@ make probe-pinned
 make probe-stream
 make probe-managed
 make probe-smem
+make probe-cublas
 ```
 
 `make` sets `PYTHONPATH=src`, so no installation is needed for development.
@@ -86,6 +87,7 @@ The architecture is taken from `--arch`, then `HIP_ARCH`, then `rocminfo`.
 | `probe_stream_event` | two non-default streams, async copies, cross-stream event ordering | HIPIFY direct |
 | `probe_managed_memory` | managed (unified) memory written by the GPU and read by the host | HIPIFY direct |
 | `probe_kernel_dynamic_smem` | dynamic shared memory, `__syncthreads`, multi-block reduction | HIPIFY direct |
+| `probe_cublas_gemm` | cuBLAS SGEMM on device buffers (library layer) | fixed by rule + link flag |
 
 Planned probes are listed in the parent migration plan, not added ahead of
 review. Add one probe at a time and stop for review before continuing.
@@ -98,6 +100,11 @@ Current registry: `src/cuda2hip_migrate/rules/__init__.py`.
 HIP-HOSTMALLOC-ARITY-001
 condition: hipHostMalloc with 4 args; arg 3 == 0; arg 4 == hipHostMallocDefault
 action: remove argument 3
+
+HIP-CUBLAS-INCLUDE-001
+condition: line-start #include directive, outside comments and literals, that is
+           exactly "#include <hipblas.h>"
+action: rewrite to "#include <hipblas/hipblas.h>"
 ```
 
 Rules:
@@ -108,7 +115,24 @@ Rules:
 - are idempotent;
 - record rule ID, line and before/after text in `rules.json`.
 
-Rule tests are in `tests/test_hostmalloc_rule.py`.
+Rule tests are in `tests/test_hostmalloc_rule.py` and `tests/test_cublas_rule.py`.
+
+## Build specs
+
+A probe may ship an optional build spec, `probes/<probe>.build.json`, for
+library-level probes that need extra `hipcc` flags:
+
+```json
+{
+  "libraries": ["hipblas"]
+}
+```
+
+Only `libraries` is supported; each entry becomes `-l<name>` for that probe
+alone. Probes without a build spec keep the plain build command. The resolved
+flags are printed as `[BUILD] flags=...` and recorded in `build.log`. Currently
+only `probe_cublas_gemm` uses a build spec. Validation tests are in
+`tests/test_build_spec.py`.
 
 ## Acceptance
 
