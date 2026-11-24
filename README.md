@@ -121,6 +121,7 @@ committed.
 | `simpleOccupancy` | Common overlay is used and `checkCudaErrors` runs; built `-O0` because the sample's own `i * i` overflows `int` | HIPIFY direct + overlay, C1/C2/C3 | 0 |
 | `fp16ScalarProduct` | overlay's `findCudaDevice` runs to completion; quoted includes; `half2` intrinsics vs native | HIPIFY direct + overlay, C1/C2/C3 | 0 |
 | `cppOverload` | kernel overloads via function pointers; `cudaFuncSetCacheConfig` / `cudaFuncGetAttributes`; secondary `.cuh` compiled but not translated | HIPIFY direct + overlay, C1/C2/C3 | 0 |
+| `simpleMultiCopy` | 4 streams, pinned buffers, async copies and event timing; overlay grew `gpuDeviceInit` / `gpuGetMaxGflopsDeviceId` / `_ConvertSMVer2Cores`; HIPIFY needed a parse-only shim for host `max` | HIPIFY direct + overlay, C1/C2/C3 | 0 |
 | `matrixMul` | overlay compiles and `findCudaDevice` runs; `hipProfilerStart` returns 801 on this platform | **blocked** at C2 | 0 |
 
 ```bash
@@ -128,6 +129,7 @@ make smoke-vectoradd
 make sample-simpleoccupancy
 make sample-fp16scalarproduct
 make sample-cppoverload
+make sample-simplemulticopy
 make sample-matrixmul
 ```
 
@@ -159,6 +161,9 @@ Each sample has a committed spec under `samples/cuda-samples-v12.0/`:
   nothing fails the run (`ERROR [redirect]`, naming the header and the spec)
   instead of passing with an unused overlay. List a header in
   `optional_redirects` when a sample may legitimately not include it.
+- `hipify_forced_includes` passes parse-only headers to `hipify-clang` with
+  `-- -include <resolved path>`, resolved against `include_dirs`. They apply to
+  HIPIFY only and are never compiled into a binary.
 - `optimization` defaults to `-O2` and is logged when overridden.
 - `schema_version` and `cuda_samples_commit` pin the spec format and the sample
   checkout revision.

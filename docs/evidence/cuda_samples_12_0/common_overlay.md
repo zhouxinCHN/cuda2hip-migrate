@@ -80,12 +80,35 @@ count per sample.
 ```text
 checkCudaErrors(expr)        hipError_t check: prints file/line/code/string, exits on failure
 findCudaDevice(argc, argv)   honours -device=<n>, validates range, sets the device, prints it
+_ConvertSMVer2Cores(a, b)    AMD analogue: 64 lanes per compute unit
+gpuGetMaxGflopsDeviceId()    ranks devices by lanes x multiprocessors x clockRate
+gpuDeviceInit(dev_id)        validates the id, selects it, prints it, returns -1 when invalid
+
+EXIT_WAIVED                  defined when not already defined, as NVIDIA's header does
+helper_string.h              included verbatim from the original Common checkout
 ```
 
-Not implemented on purpose: `gpuGetMaxGflopsDeviceId`-style selection,
-compute-capability gates, driver API helpers, `cudaDeviceProp` tuning. The
-971-line NVIDIA header was not rewritten; only what validated samples call exists
-here.
+Not implemented on purpose: compute-capability gates, driver API helpers,
+`cudaDeviceProp` tuning, image/GL/NVIDIA-library helpers. The 971-line NVIDIA
+header was not rewritten; only what validated samples call exists here.
+
+AMD semantic caveats: the three device-selection helpers are NVIDIA-shaped
+functions implemented with AMD proxies (lanes-per-CU instead of SM cores,
+lanes x multiprocessors x clock instead of a GFLOPs estimate). They influence
+banners and workload clamps in the samples that use them, never correctness.
+
+## Parse-only shim
+
+`cuda_samples_compat/host_math_parse_shim.h` exists because `hipify-clang`'s CUDA
+math shim declares `max`/`min` as `__device__`-only while nvcc exposes them to
+host code. Samples that call them on the host fail to parse, so no HIP output is
+produced at all. The shim pulls `std::max`/`std::min` into the global namespace,
+is passed to `hipify-clang` with `-- -include <shim>`, and is never compiled into
+a binary (`hipcc` provides host `max`/`min` itself).
+
+It lives in the same overlay tree but is a different mechanism: parse-time only,
+selected per spec by `hipify_forced_includes`, resolved against `include_dirs`,
+and logged as `[HIPIFY-PARSE-INCLUDE]`.
 
 ## Device selection argument parsing
 

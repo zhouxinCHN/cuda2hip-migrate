@@ -55,6 +55,16 @@ class CommittedSpecTests(unittest.TestCase):
                         f"{target} not found under any include_dir of {path.name}",
                     )
 
+    def test_forced_includes_live_in_the_repository(self) -> None:
+        for path in committed_specs():
+            spec = load_sample_spec(path)
+            for forced in spec.hipify_forced_includes:
+                with self.subTest(spec=path.name, forced=forced.name):
+                    self.assertTrue(forced.is_file(), forced)
+                    self.assertTrue(
+                        forced.resolve().is_relative_to(REPO_ROOT), forced
+                    )
+
     def test_redirect_targets_are_declared_by_expected_count(self) -> None:
         for path in committed_specs():
             spec = load_sample_spec(path)

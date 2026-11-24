@@ -109,4 +109,61 @@ inline int findCudaDevice(int argc, const char **argv) {
     return device;
 }
 
+// NVIDIA maps a compute capability to cores per SM. AMD architectures have no
+// SM version, so this returns the SIMD width in lanes per compute unit (64 on
+// GCN, RDNA and CDNA) as the closest hardware-level analogue. It is used by
+// samples only for banner text and for a workload scale clamp, never for
+// correctness; the value is deliberately conservative rather than a marketing
+// shader count.
+inline int _ConvertSMVer2Cores(int major, int minor) {
+    (void)major;
+    (void)minor;
+    return 64;
+}
+
+// NVIDIA's version measures device GFLOPs by compute capability. The AMD proxy
+// here is lanes x compute units x clock, used only to rank devices.
+inline int gpuGetMaxGflopsDeviceId() {
+    int count = 0;
+    checkCudaErrors(compat_get_device_count(&count));
+    if (count <= 0) {
+        return -1;
+    }
+
+    int best_device = 0;
+    long long best_score = -1;
+    for (int device = 0; device < count; ++device) {
+        compat_device_prop_t properties{};
+        checkCudaErrors(compat_get_device_properties(&properties, device));
+        const long long score = static_cast<long long>(properties.multiProcessorCount) *
+                                _ConvertSMVer2Cores(properties.major, properties.minor) *
+                                properties.clockRate;
+        if (score > best_score) {
+            best_score = score;
+            best_device = device;
+        }
+    }
+
+    checkCudaErrors(compat_set_device(best_device));
+    return best_device;
+}
+
+// Validates one explicit device id, selects it and reports it.
+inline int gpuDeviceInit(int dev_id) {
+    int count = 0;
+    checkCudaErrors(compat_get_device_count(&count));
+    if (dev_id < 0 || dev_id >= count) {
+        std::fprintf(stderr, ">> gpuDeviceInit (-device=%d) is not a valid device\n",
+                     dev_id);
+        return -1;
+    }
+
+    checkCudaErrors(compat_set_device(dev_id));
+    compat_device_prop_t properties{};
+    checkCudaErrors(compat_get_device_properties(&properties, dev_id));
+    std::printf("gpuDeviceInit() HIP Device [%d]: \"%s\"\n", dev_id,
+                properties.name);
+    return dev_id;
+}
+
 #endif  // CUDA_SAMPLES_COMPAT_HELPER_CUDA_H

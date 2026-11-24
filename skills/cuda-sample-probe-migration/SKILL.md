@@ -57,6 +57,9 @@ Rules for sample adaptation:
   `"header"` include forms are redirected.
 - The overlay has no CUDA/HIP dependency in its argument parsing
   (`cuda_samples_compat/argparse.h`), so it is host-testable with `g++`.
+- When `hipify-clang` cannot parse a source at all (no HIP output is produced),
+  a post-HIPIFY rule cannot help. Use `hipify_forced_includes` for a parse-only
+  shim, record it in the spec and evidence, and keep it out of the build.
 - Never edit the sample to make it pass. If a sample's own check fails for a
   sample-level reason (e.g. signed overflow), record it and use an explicit,
   logged build setting such as `optimization: "-O0"` rather than weakening C2/C3.
@@ -100,6 +103,7 @@ External cuda-samples v12.0 status:
 | `simpleOccupancy` | overlay used, C1/C2/C3 at `-O0` (sample `int` overflow at `-O2`) | 0 |
 | `fp16ScalarProduct` | overlay's `findCudaDevice` runs to C3; quoted includes; `half2` math | 0 |
 | `cppOverload` | `cudaFuncSetCacheConfig`/`GetAttributes`; secondary `.cuh` compiled, not translated | 0 |
+| `simpleMultiCopy` | 4-stream pipeline; overlay device-selection helpers; HIPIFY parse shim for host `max` | 0 |
 | `matrixMul` | blocked at C2: `hipProfilerStart` returns 801 | 0 |
 
 Implemented rule:

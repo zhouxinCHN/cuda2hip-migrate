@@ -121,6 +121,7 @@ SPEC_KEYS = frozenset(
         "expected_redirects",
         "include_redirects",
         "optional_redirects",
+        "hipify_forced_includes",
         "optimization",
     }
 )
@@ -143,6 +144,7 @@ class SampleSpec:
     expected_redirects: int | None
     include_redirects: tuple[tuple[str, str], ...]
     optional_redirects: tuple[str, ...]
+    hipify_forced_includes: tuple[Path, ...]
     optimization: str
     schema_version: int
     cuda_samples_commit: str | None
@@ -155,6 +157,28 @@ def _spec_string_list(path: Path, raw: dict[str, object], key: str) -> tuple[str
     ):
         raise ProbeError("spec", f"{path}: '{key}' must be a list of non-empty strings")
     return tuple(str(item) for item in value)
+
+
+def resolve_forced_includes(
+    spec_path: Path,
+    include_dirs: tuple[Path, ...],
+    names: tuple[str, ...],
+) -> tuple[Path, ...]:
+    """Resolve parse-only forced includes against the declared include dirs."""
+    resolved: list[Path] = []
+    for name in names:
+        for directory in include_dirs:
+            candidate = directory / name
+            if candidate.is_file():
+                resolved.append(candidate)
+                break
+        else:
+            raise ProbeError(
+                "spec",
+                f"{spec_path}: hipify_forced_includes entry {name!r} was not found "
+                "under any declared include_dir",
+            )
+    return tuple(resolved)
 
 
 def load_sample_spec(path: Path) -> SampleSpec:
@@ -231,12 +255,19 @@ def load_sample_spec(path: Path) -> SampleSpec:
             "spec", f"{path}: 'expected_redirects' must be a non-negative integer"
         )
 
+    include_dirs = tuple(
+        base_dir / item for item in _spec_string_list(path, raw, "include_dirs")
+    )
+    forced_includes = resolve_forced_includes(
+        path,
+        include_dirs,
+        _spec_string_list(path, raw, "hipify_forced_includes"),
+    )
+
     return SampleSpec(
         sample=sample,
         source=source,
-        include_dirs=tuple(
-            base_dir / item for item in _spec_string_list(path, raw, "include_dirs")
-        ),
+        include_dirs=include_dirs,
         libraries=_spec_string_list(path, raw, "libraries"),
         success_marker=marker,
         expected=str(expected),
@@ -245,6 +276,7 @@ def load_sample_spec(path: Path) -> SampleSpec:
             (str(header), str(target)) for header, target in redirects_raw.items()
         ),
         optional_redirects=_spec_string_list(path, raw, "optional_redirects"),
+        hipify_forced_includes=forced_includes,
         optimization=str(optimization),
         schema_version=int(schema_version),
         cuda_samples_commit=None if commit is None else str(commit),
@@ -328,6 +360,7 @@ def run_probe(name: str, *, out_dir: Path | None = None, arch: str | None = None
         optional_redirects=(),
         expected_redirects=None,
         spec_path=None,
+        forced_includes=(),
         expected=None,
         optimization=DEFAULT_OPTIMIZATION,
     )
@@ -343,6 +376,7 @@ def run_source_file(
     success_marker: str = DEFAULT_SUCCESS_MARKER,
     include_redirects: tuple[tuple[str, str], ...] = (),
     optional_redirects: tuple[str, ...] = (),
+    forced_includes: tuple[Path, ...] = (),
     optimization: str = DEFAULT_OPTIMIZATION,
 ) -> RunResult:
     """Run an external CUDA source file, for example one cuda-samples file.
@@ -370,6 +404,7 @@ def run_source_file(
         optional_redirects=tuple(optional_redirects),
         expected_redirects=None,
         spec_path=None,
+        forced_includes=tuple(Path(item) for item in forced_includes),
         expected=None,
         optimization=optimization,
     )
@@ -393,6 +428,7 @@ def run_sample_spec(path: Path, *, out_dir: Path | None = None, arch: str | None
         optional_redirects=spec.optional_redirects,
         expected_redirects=spec.expected_redirects,
         spec_path=spec_file,
+        forced_includes=spec.hipify_forced_includes,
         expected=spec.expected,
         optimization=spec.optimization,
     )
@@ -411,6 +447,7 @@ def _run_source(
     optional_redirects: tuple[str, ...] = (),
     expected_redirects: int | None = None,
     spec_path: Path | None = None,
+    forced_includes: tuple[Path, ...] = (),
     expected: str | None,
     optimization: str,
 ) -> RunResult:
@@ -481,10 +518,18 @@ def _run_source(
     if include_flags:
         logger.info("[INCLUDE] %s", " ".join(include_flags))
 
+    hipify_command = [hipify, str(hipify_input), *include_flags, "-o", str(hipified)]
+    if forced_includes:
+        # hipify-clang forwards everything after "--" to clang; -include is a
+        # clang option, so it must come after the separator.
+        clang_args: list[str] = []
+        for forced in forced_includes:
+            clang_args += ["-include", str(forced)]
+        hipify_command += ["--", *clang_args]
+        logger.info("[HIPIFY-PARSE-INCLUDE] %s", " ".join(clang_args))
+
     hipify_log = artifacts / "hipify.log"
-    result = run_logged(
-        [hipify, str(hipify_input), *include_flags, "-o", str(hipified)], hipify_log
-    )
+    result = run_logged(hipify_command, hipify_log)
     if result.returncode != 0 or not hipified.is_file():
         raise ProbeError(
             "hipify",

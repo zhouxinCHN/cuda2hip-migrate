@@ -10,6 +10,7 @@ from cuda2hip_migrate.runner import (
     ProbeError,
     check_expectation,
     load_sample_spec,
+    resolve_forced_includes,
 )
 
 
@@ -134,6 +135,41 @@ class SampleSpecTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ProbeError, "sample spec not found"):
                 load_sample_spec(Path(directory) / "absent.json")
+
+
+class ForcedIncludeTests(unittest.TestCase):
+    def test_resolves_against_include_dirs(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            include_dir = Path(directory) / "include"
+            (include_dir / "shim").mkdir(parents=True)
+            target = include_dir / "shim" / "host_math.h"
+            target.write_text("// shim\n", encoding="utf-8")
+            resolved = resolve_forced_includes(
+                Path(directory) / "spec.json", (include_dir,), ("shim/host_math.h",)
+            )
+        self.assertEqual(resolved, (target,))
+
+    def test_missing_forced_include_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ProbeError, "hipify_forced_includes"):
+                resolve_forced_includes(
+                    Path(directory) / "spec.json", (Path(directory),), ("absent.h",)
+                )
+
+    def test_spec_records_resolved_forced_includes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            include_dir = Path(directory) / "include"
+            (include_dir / "cuda_samples_compat").mkdir(parents=True)
+            shim = include_dir / "cuda_samples_compat" / "host_math_parse_shim.h"
+            shim.write_text("// shim\n", encoding="utf-8")
+            payload = {
+                "sample": "s",
+                "source": "x.cu",
+                "include_dirs": ["include"],
+                "hipify_forced_includes": ["cuda_samples_compat/host_math_parse_shim.h"],
+            }
+            spec = load_sample_spec(write_spec(directory, payload))
+        self.assertEqual(spec.hipify_forced_includes, (shim,))
 
 
 class ExpectationTests(unittest.TestCase):

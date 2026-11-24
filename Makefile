@@ -1,7 +1,7 @@
 PYTHON ?= python3
 export PYTHONPATH := $(CURDIR)/src
 
-.PHONY: all test list probe-malloc probe-pinned probe-stream probe-managed probe-smem probe-cublas probe-texture probes smoke-vectoradd sample-simpleoccupancy sample-fp16scalarproduct sample-cppoverload sample-matrixmul install build clean
+.PHONY: all test list probe-malloc probe-pinned probe-stream probe-managed probe-smem probe-cublas probe-texture probes smoke-vectoradd sample-simpleoccupancy sample-fp16scalarproduct sample-cppoverload sample-simplemulticopy sample-matrixmul install build clean
 
 all: test
 
@@ -48,6 +48,9 @@ sample-fp16scalarproduct:
 
 sample-cppoverload:
 	$(PYTHON) -m cuda2hip_migrate run --spec samples/cuda-samples-v12.0/cppOverload.json
+
+sample-simplemulticopy:
+	$(PYTHON) -m cuda2hip_migrate run --spec samples/cuda-samples-v12.0/simpleMultiCopy.json
 
 sample-matrixmul:
 	$(PYTHON) -m cuda2hip_migrate run --spec samples/cuda-samples-v12.0/matrixMul.json

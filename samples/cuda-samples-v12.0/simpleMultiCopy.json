@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "sample": "cuda-samples-v12.0/simpleMultiCopy",
+  "cuda_samples_commit": "2b689228b746248b7bb7d2778d5ea0701669f7d3",
+  "source": "../../third-party/cuda-samples/Samples/0_Introduction/simpleMultiCopy/simpleMultiCopy.cu",
+  "include_dirs": [
+    "../../compat/cuda-samples-v12.0/include",
+    "../../third-party/cuda-samples/Common"
+  ],
+  "hipify_forced_includes": [
+    "cuda_samples_compat/host_math_parse_shim.h"
+  ],
+  "libraries": [],
+  "success_marker": "Overlapped using 4 streams",
+  "expected": "hipify-direct",
+  "expected_redirects": 1,
+  "include_redirects": {
+    "helper_cuda.h": "cuda_samples_compat/helper_cuda.h"
+  },
+  "optional_redirects": []
+}
