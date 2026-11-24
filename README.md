@@ -131,19 +131,33 @@ Each sample has a committed spec under `samples/cuda-samples-v12.0/`:
 
 ```json
 {
+  "schema_version": 1,
   "sample": "cuda-samples-v12.0/simpleOccupancy",
-  "source": "third-party/cuda-samples/Samples/0_Introduction/simpleOccupancy/simpleOccupancy.cu",
-  "include_dirs": ["compat/cuda-samples-v12.0/include", "third-party/cuda-samples/Common"],
+  "cuda_samples_commit": "2b689228b746248b7bb7d2778d5ea0701669f7d3",
+  "source": "../../third-party/cuda-samples/Samples/0_Introduction/simpleOccupancy/simpleOccupancy.cu",
+  "include_dirs": ["../../compat/cuda-samples-v12.0/include", "../../third-party/cuda-samples/Common"],
   "libraries": [],
   "success_marker": "Test PASSED",
   "expected": "hipify-direct",
+  "expected_redirects": 1,
   "optimization": "-O0",
-  "include_redirects": {"helper_cuda.h": "cuda_samples_compat/helper_cuda.h"}
+  "include_redirects": {"helper_cuda.h": "cuda_samples_compat/helper_cuda.h"},
+  "optional_redirects": []
 }
 ```
 
-`expected` is enforced: a spec declaring `hipify-direct` fails if any rule fires.
-`optimization` defaults to `-O2` and is logged when overridden.
+- `source` and `include_dirs` are resolved relative to the spec file, not the
+  process working directory, so a spec behaves the same from any CWD.
+- `expected` describes **post-HIPIFY rule hits only** and is enforced: a spec
+  declaring `hipify-direct` fails if any rule fires. Redirects are covered
+  separately by `expected_redirects` (exact count, `0` accepted).
+- `include_redirects` are mandatory by default: a declared redirect that matches
+  nothing fails the run (`ERROR [redirect]`, naming the header and the spec)
+  instead of passing with an unused overlay. List a header in
+  `optional_redirects` when a sample may legitimately not include it.
+- `optimization` defaults to `-O2` and is logged when overridden.
+- `schema_version` and `cuda_samples_commit` pin the spec format and the sample
+  checkout revision.
 
 ### Common helper overlay
 
@@ -158,10 +172,11 @@ compat/cuda-samples-v12.0/include/cuda_samples_compat/helper_cuda.h
                    driver API helpers, image/GL/NVIDIA-library helpers
 ```
 
-The redirect rewrites `#include <helper_cuda.h>` in the copied source before
-HIPIFY, is recorded in `redirects.json`, and warns with `[REDIRECT-MISS]` when a
-declared redirect matches nothing. The original checkout is never edited and the
-CPU-only Common headers keep coming from it.
+The redirect rewrites `#include <helper_cuda.h>` or `#include "helper_cuda.h"` in
+the copied source before HIPIFY, is recorded in `redirects.json`, and **fails the
+run** when a declared redirect matches nothing (see `optional_redirects` for the
+intentional exception). The original checkout is never edited and the CPU-only
+Common headers keep coming from it.
 
 Evidence: [`common_overlay.md`](docs/evidence/cuda_samples_12_0/common_overlay.md),
 [`vectorAdd.md`](docs/evidence/cuda_samples_12_0/vectorAdd.md),
@@ -230,7 +245,7 @@ Each run creates:
 <out>/
 |-- source/<name>.cu           # original source, byte-identical copy
 |-- preprocessed/<name>.cu     # only with include redirects; HIPIFY input
-|-- redirects.json             # only with include redirects
+|-- redirects.json             # redirect records, [] when none applied
 |-- hipified/<name>.hip.cu     # untouched HIPIFY output
 |-- adapted/<name>.hip.cu      # rules applied; built source
 |-- hipify.diff                # HIPIFY input -> HIPIFY output, audit only

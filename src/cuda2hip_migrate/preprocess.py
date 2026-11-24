@@ -20,24 +20,28 @@ from .rules.cpp import find_directives
 RULE_ID = "PRE-HIPIFY-INCLUDE-REDIRECT"
 
 _DIRECTIVE = re.compile(
-    r"^(?P<prefix>#\s*include\s*)<(?P<header>[^<>\"\s]+)>(?P<tail>\s*(?://.*)?)$"
+    r"^(?P<prefix>#\s*include\s*)"
+    r'(?:<(?P<angle>[^<>"\s]+)>|"(?P<quoted>[^<>"\s]+)")'
+    r"(?P<tail>\s*(?://.*)?)$"
 )
 
 
 def matched_headers(directive: str) -> str | None:
-    """Return the header of an ``#include <...>`` line, ignoring a trailing comment."""
+    """Return the header of an include line, ignoring a trailing comment."""
     match = _DIRECTIVE.match(directive.rstrip())
-    return match.group("header") if match else None
+    if match is None:
+        return None
+    return match.group("angle") or match.group("quoted")
 
 
 def apply_include_redirects(
     text: str, redirects: tuple[tuple[str, str], ...]
 ) -> tuple[str, list[RuleChange]]:
-    """Rewrite ``#include <header>`` to ``#include "replacement"`` per mapping.
+    """Rewrite ``#include <header>`` or ``#include "header"`` to the replacement.
 
     A trailing line comment is preserved. Redirects that never match are the
-    caller's business: the runner reports them so a silently unused overlay
-    header cannot be mistaken for a successful redirect.
+    caller's business: the runner fails the run unless the header is declared
+    optional.
     """
     if not redirects:
         return text, []
@@ -49,7 +53,8 @@ def apply_include_redirects(
         match = _DIRECTIVE.match(stripped)
         if match is None:
             continue
-        replacement = mapping.get(match.group("header"))
+        header = match.group("angle") or match.group("quoted")
+        replacement = mapping.get(header)
         if replacement is None:
             continue
 

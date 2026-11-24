@@ -110,16 +110,21 @@ def probe_build_flags(name: str) -> tuple[str, ...]:
 
 SPEC_KEYS = frozenset(
     {
+        "schema_version",
+        "cuda_samples_commit",
         "sample",
         "source",
         "include_dirs",
         "libraries",
         "success_marker",
         "expected",
+        "expected_redirects",
         "include_redirects",
+        "optional_redirects",
         "optimization",
     }
 )
+SPEC_SCHEMA_VERSION = 1
 EXPECTATIONS = ("hipify-direct", "rule-required", "unknown")
 OPTIMIZATION_LEVELS = ("-O0", "-O1", "-O2", "-O3")
 DEFAULT_OPTIMIZATION = "-O2"
@@ -135,8 +140,12 @@ class SampleSpec:
     libraries: tuple[str, ...]
     success_marker: str
     expected: str
+    expected_redirects: int | None
     include_redirects: tuple[tuple[str, str], ...]
+    optional_redirects: tuple[str, ...]
     optimization: str
+    schema_version: int
+    cuda_samples_commit: str | None
 
 
 def _spec_string_list(path: Path, raw: dict[str, object], key: str) -> tuple[str, ...]:
@@ -164,11 +173,26 @@ def load_sample_spec(path: Path) -> SampleSpec:
         names = ", ".join(sorted(str(key) for key in unknown))
         raise ProbeError("spec", f"{path}: unsupported key(s): {names}")
 
+    schema_version = raw.get("schema_version", SPEC_SCHEMA_VERSION)
+    if schema_version != SPEC_SCHEMA_VERSION:
+        raise ProbeError(
+            "spec",
+            f"{path}: unsupported schema_version {schema_version!r}; "
+            f"expected {SPEC_SCHEMA_VERSION}",
+        )
+
+    commit = raw.get("cuda_samples_commit")
+    if commit is not None and (not isinstance(commit, str) or not commit):
+        raise ProbeError("spec", f"{path}: 'cuda_samples_commit' must be a string")
+
     for key in ("sample", "source"):
         if not isinstance(raw.get(key), str) or not raw[key]:
             raise ProbeError("spec", f"{path}: '{key}' is required and must be a string")
     sample = str(raw["sample"])
-    source = Path(str(raw["source"]))
+    # Paths are resolved relative to the spec file, never the process CWD, so a
+    # committed spec behaves the same from any working directory.
+    base_dir = path.resolve().parent
+    source = base_dir / str(raw["source"])
 
     expected = raw.get("expected", "unknown")
     if expected not in EXPECTATIONS:
@@ -197,24 +221,42 @@ def load_sample_spec(path: Path) -> SampleSpec:
             f"{path}: 'optimization' must be one of: {', '.join(OPTIMIZATION_LEVELS)}",
         )
 
+    expected_redirects = raw.get("expected_redirects")
+    if expected_redirects is not None and (
+        isinstance(expected_redirects, bool)
+        or not isinstance(expected_redirects, int)
+        or expected_redirects < 0
+    ):
+        raise ProbeError(
+            "spec", f"{path}: 'expected_redirects' must be a non-negative integer"
+        )
+
     return SampleSpec(
         sample=sample,
         source=source,
         include_dirs=tuple(
-            Path(item) for item in _spec_string_list(path, raw, "include_dirs")
+            base_dir / item for item in _spec_string_list(path, raw, "include_dirs")
         ),
         libraries=_spec_string_list(path, raw, "libraries"),
         success_marker=marker,
         expected=str(expected),
+        expected_redirects=expected_redirects,
         include_redirects=tuple(
             (str(header), str(target)) for header, target in redirects_raw.items()
         ),
+        optional_redirects=_spec_string_list(path, raw, "optional_redirects"),
         optimization=str(optimization),
+        schema_version=int(schema_version),
+        cuda_samples_commit=None if commit is None else str(commit),
     )
 
 
 def check_expectation(expected: str | None, applied: int) -> None:
-    """Fail the run when the declared adaptation class does not match reality."""
+    """Fail the run when the declared adaptation class does not match reality.
+
+    ``expected`` describes post-HIPIFY rule hits only. Redirect counts are
+    covered separately by :func:`check_redirect_expectation`.
+    """
     if expected is None or expected == "unknown":
         return
     if expected == "hipify-direct" and applied:
@@ -224,6 +266,44 @@ def check_expectation(expected: str | None, applied: int) -> None:
         )
     if expected == "rule-required" and not applied:
         raise ProbeError("expectation", "declared rule-required but no rule matched")
+
+
+def check_redirect_expectation(
+    expected: int | None, applied: int, *, spec_path: Path | None = None
+) -> None:
+    """Fail the run when the declared redirect count does not match reality."""
+    if expected is None or applied == expected:
+        return
+    where = f" in {spec_path}" if spec_path else ""
+    raise ProbeError(
+        "expectation",
+        f"declared expected_redirects={expected} but {applied} redirect(s) "
+        f"were applied{where}",
+    )
+
+
+def check_redirects(
+    name: str,
+    unmatched: tuple[str, ...],
+    optional: tuple[str, ...],
+    *,
+    spec_path: Path | None = None,
+) -> tuple[str, ...]:
+    """Fail when a declared redirect matched nothing, unless it is optional.
+
+    Returns the unmatched headers that were declared optional.
+    """
+    allowed = set(optional)
+    missing = tuple(header for header in unmatched if header not in allowed)
+    if missing:
+        where = f" in {spec_path}" if spec_path else ""
+        raise ProbeError(
+            "redirect",
+            f"{name}{where}: declared include redirect(s) not found in source: "
+            f"{', '.join(missing)}; the overlay header would be unused. "
+            "Declare the header in 'optional_redirects' if that is intended.",
+        )
+    return tuple(header for header in unmatched if header in allowed)
 
 
 def source_name(source_path: Path) -> str:
@@ -245,6 +325,9 @@ def run_probe(name: str, *, out_dir: Path | None = None, arch: str | None = None
         libraries=(),
         success_marker=DEFAULT_SUCCESS_MARKER,
         include_redirects=(),
+        optional_redirects=(),
+        expected_redirects=None,
+        spec_path=None,
         expected=None,
         optimization=DEFAULT_OPTIMIZATION,
     )
@@ -259,6 +342,7 @@ def run_source_file(
     libraries: tuple[str, ...] = (),
     success_marker: str = DEFAULT_SUCCESS_MARKER,
     include_redirects: tuple[tuple[str, str], ...] = (),
+    optional_redirects: tuple[str, ...] = (),
     optimization: str = DEFAULT_OPTIMIZATION,
 ) -> RunResult:
     """Run an external CUDA source file, for example one cuda-samples file.
@@ -283,6 +367,9 @@ def run_source_file(
         libraries=tuple(libraries),
         success_marker=success_marker,
         include_redirects=tuple(include_redirects),
+        optional_redirects=tuple(optional_redirects),
+        expected_redirects=None,
+        spec_path=None,
         expected=None,
         optimization=optimization,
     )
@@ -290,7 +377,8 @@ def run_source_file(
 
 def run_sample_spec(path: Path, *, out_dir: Path | None = None, arch: str | None = None) -> RunResult:
     """Run an external source described by a committed sample spec file."""
-    spec = load_sample_spec(Path(path))
+    spec_file = Path(path).resolve()
+    spec = load_sample_spec(spec_file)
     if not spec.source.is_file():
         raise ProbeError("source", f"spec source not found: {spec.source}")
     return _run_source(
@@ -302,6 +390,9 @@ def run_sample_spec(path: Path, *, out_dir: Path | None = None, arch: str | None
         libraries=spec.libraries,
         success_marker=spec.success_marker,
         include_redirects=spec.include_redirects,
+        optional_redirects=spec.optional_redirects,
+        expected_redirects=spec.expected_redirects,
+        spec_path=spec_file,
         expected=spec.expected,
         optimization=spec.optimization,
     )
@@ -317,6 +408,9 @@ def _run_source(
     libraries: tuple[str, ...],
     success_marker: str,
     include_redirects: tuple[tuple[str, str], ...],
+    optional_redirects: tuple[str, ...] = (),
+    expected_redirects: int | None = None,
+    spec_path: Path | None = None,
     expected: str | None,
     optimization: str,
 ) -> RunResult:
@@ -337,26 +431,30 @@ def _run_source(
     source = source_dir / f"{name}.cu"
     source.write_text(source_text, encoding="utf-8")
 
-    for header in unmatched_redirects(source_text, include_redirects):
-        logger.warning(
-            "[REDIRECT-MISS] %s is declared in the spec but no matching include "
-            "was found; the overlay header is not in use",
+    skipped = check_redirects(
+        name,
+        unmatched_redirects(source_text, include_redirects),
+        optional_redirects,
+        spec_path=spec_path,
+    )
+    for header in skipped:
+        logger.info(
+            "[REDIRECT-SKIP] %s is declared optional and no matching include "
+            "was found",
             header,
         )
 
     preprocessed_text, redirect_changes = apply_include_redirects(
         source_text, include_redirects
     )
+    check_redirect_expectation(
+        expected_redirects, len(redirect_changes), spec_path=spec_path
+    )
     if redirect_changes:
         preprocessed_dir = artifacts / "preprocessed"
         preprocessed_dir.mkdir(parents=True, exist_ok=True)
         hipify_input = preprocessed_dir / f"{name}.cu"
         hipify_input.write_text(preprocessed_text, encoding="utf-8")
-        (artifacts / "redirects.json").write_text(
-            json.dumps([change.as_dict() for change in redirect_changes], indent=2)
-            + "\n",
-            encoding="utf-8",
-        )
         for change in redirect_changes:
             logger.info(
                 "[REDIRECT] %s line=%d %s -> %s",
@@ -365,9 +463,13 @@ def _run_source(
                 change.before,
                 change.after,
             )
-        logger.info("[REDIRECTS] applied=%d", len(redirect_changes))
     else:
         hipify_input = source
+    (artifacts / "redirects.json").write_text(
+        json.dumps([change.as_dict() for change in redirect_changes], indent=2) + "\n",
+        encoding="utf-8",
+    )
+    logger.info("[REDIRECTS] applied=%d", len(redirect_changes))
 
     hipified = hipified_dir / f"{name}.hip.cu"
     adapted = adapted_dir / f"{name}.hip.cu"

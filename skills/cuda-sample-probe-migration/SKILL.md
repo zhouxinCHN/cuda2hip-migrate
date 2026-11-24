@@ -29,10 +29,17 @@ projects can be migrated automatically.
 cuda2hip-migrate run --spec samples/cuda-samples-v12.0/<sample>.json
 ```
 
-A spec pins source path, `include_dirs`, `libraries`, `success_marker`,
-`expected` (`hipify-direct` / `rule-required` / `unknown`), `optimization`
-(`-O0`..`-O3`, default `-O2`) and `include_redirects`. `expected` is enforced:
-declaring `hipify-direct` fails the run if a rule fires.
+A spec pins `schema_version`, `cuda_samples_commit`, source path,
+`include_dirs`, `libraries`, `success_marker`, `expected` (`hipify-direct` /
+`rule-required` / `unknown`), `expected_redirects`, `optimization`
+(`-O0`..`-O3`, default `-O2`), `include_redirects` and `optional_redirects`.
+
+- Paths are resolved relative to the spec file, never the CWD.
+- `expected` covers **post-HIPIFY rules only** and is enforced; use
+  `expected_redirects` for the exact redirect count.
+- A declared redirect that matches nothing **fails the run**. Only list a header
+  in `optional_redirects` when a sample may legitimately omit it; otherwise an
+  unused overlay would look like a successful migration.
 
 Ad-hoc runs still support `--source PATH --include-dir DIR --library NAME
 --success-marker TEXT`.
@@ -46,7 +53,10 @@ Rules for sample adaptation:
   or similar needs the overlay plus a pre-HIPIFY include redirect; measure it,
   never assume it.
 - Redirect before HIPIFY, never reverse a post-HIPIFY `<hip/hip_runtime_api.h>`
-  back to a helper header: the two cannot be distinguished.
+  back to a helper header: the two cannot be distinguished. Both `<header>` and
+  `"header"` include forms are redirected.
+- The overlay has no CUDA/HIP dependency in its argument parsing
+  (`cuda_samples_compat/argparse.h`), so it is host-testable with `g++`.
 - Never edit the sample to make it pass. If a sample's own check fails for a
   sample-level reason (e.g. signed overflow), record it and use an explicit,
   logged build setting such as `optimization: "-O0"` rather than weakening C2/C3.

@@ -24,16 +24,24 @@ The spec declares:
 
 ```json
 {
+  "schema_version": 1,
+  "cuda_samples_commit": "2b689228b746248b7bb7d2778d5ea0701669f7d3",
   "include_dirs": [
-    "compat/cuda-samples-v12.0/include",
-    "third-party/cuda-samples/Common"
+    "../../compat/cuda-samples-v12.0/include",
+    "../../third-party/cuda-samples/Common"
   ],
   "success_marker": "Test PASSED",
   "expected": "hipify-direct",
+  "expected_redirects": 1,
   "optimization": "-O0",
   "include_redirects": {"helper_cuda.h": "cuda_samples_compat/helper_cuda.h"}
 }
 ```
+
+`expected_redirects: 1` makes the redirect count part of acceptance: a run with
+zero redirects fails instead of silently building without the overlay. Spec
+paths are relative to the spec file, so this spec was also run from `/tmp` with
+the same result, and the loader is covered by a CWD-independence test.
 
 ## Pre-HIPIFY redirect
 

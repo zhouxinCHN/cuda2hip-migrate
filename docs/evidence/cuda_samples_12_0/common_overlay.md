@@ -45,10 +45,24 @@ This must happen before HIPIFY. After HIPIFY the directive is
 include of that header, so a post-HIPIFY rule cannot reliably reverse it.
 
 Redirects only fire on a line-start `#include` outside comments, strings and
-character literals, preserve trailing line comments, and are recorded in
-`redirects.json` with line and before/after text. A declared redirect that never
-matches produces `[REDIRECT-MISS]`, so an unused overlay cannot look like a
-successful migration.
+character literals, support both `<header>` and `"header"` forms, preserve
+trailing line comments, and are recorded in `redirects.json` with line and
+before/after text. `redirects.json` is written on every run, as `[]` when no
+redirect applied.
+
+A declared redirect that never matches **fails the run**:
+
+```text
+ERROR [redirect]: plain in <spec>: declared include redirect(s) not found in
+source: helper_cuda.h; the overlay header would be unused. Declare the header in
+'optional_redirects' if that is intended.
+```
+
+That is the fix for a real false pass: an earlier revision only logged
+`[REDIRECT-MISS]` and still reported C1/C2/C3 success, which was directly
+contradicted by the wording of this document. `optional_redirects` now carries
+the intentional exception, and `expected_redirects` pins the exact redirect
+count per sample.
 
 ## Header classification and intended strategy
 
@@ -72,6 +86,24 @@ Not implemented on purpose: `gpuGetMaxGflopsDeviceId`-style selection,
 compute-capability gates, driver API helpers, `cudaDeviceProp` tuning. The
 971-line NVIDIA header was not rewritten; only what validated samples call exists
 here.
+
+## Device selection argument parsing
+
+`findCudaDevice(argc, argv)` honours `-device=<n>`. Parsing lives in
+`cuda_samples_compat/argparse.h`, which has no CUDA or HIP dependency, so
+`tests/test_compat_header.py` compiles it with `g++` and runs it on the host:
+
+```text
+-device=0   -> found, "0"        --device=0 -> found, "0"
+---device=3 -> found, "3"        device=5   -> found, "5"
+-device=-1  -> found, "-1"       -wA=320    -> not the device flag
+```
+
+Any number of leading `-` is stripped, matching the NVIDIA helper's
+`stringRemoveDelimiter`. An earlier revision stripped at most one `-` and
+compared the remainder to `device`, so `-device=0` and `--device=0` were both
+ignored and the default device was always used. That is fixed and covered by
+host tests that need no GPU.
 
 The overlay is a header with two modes. `hipcc` defines `__HIPCC__`/`__HIP__`,
 so the HIP branch is what builds. `hipify-clang` parses it in CUDA mode and only

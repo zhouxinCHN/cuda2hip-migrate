@@ -43,6 +43,14 @@ class IncludeRedirectTests(unittest.TestCase):
         self.assertEqual(output, source)
         self.assertEqual(changes, [])
 
+    def test_quoted_include_is_redirected(self) -> None:
+        source = '#include "helper_cuda.h"\n'
+        output, changes = apply_include_redirects(source, REDIRECTS)
+        self.assertEqual(
+            output, '#include "cuda_samples_compat/helper_cuda.h"\n'
+        )
+        self.assertEqual(len(changes), 1)
+
     def test_already_quoted_include_is_unchanged(self) -> None:
         source = '#include "cuda_samples_compat/helper_cuda.h"\n'
         output, changes = apply_include_redirects(source, REDIRECTS)

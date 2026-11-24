@@ -24,12 +24,15 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "cuda_samples_compat/argparse.h"
+
 #if defined(__HIPCC__) || defined(__HIP__)
 
 #include <hip/hip_runtime.h>
 
 #define compat_error_t hipError_t
 #define compat_device_prop_t hipDeviceProp_t
+#define compat_success hipSuccess
 #define compat_get_error_string hipGetErrorString
 #define compat_get_device_count hipGetDeviceCount
 #define compat_set_device hipSetDevice
@@ -42,6 +45,7 @@
 
 #define compat_error_t cudaError_t
 #define compat_device_prop_t cudaDeviceProp
+#define compat_success cudaSuccess
 #define compat_get_error_string cudaGetErrorString
 #define compat_get_device_count cudaGetDeviceCount
 #define compat_set_device cudaSetDevice
@@ -53,35 +57,12 @@ namespace cuda_samples_compat {
 
 inline void check_error(compat_error_t result, const char *func,
                         const char *file, int line) {
-    if (result != 0) {
+    if (result != compat_success) {
         std::fprintf(stderr, "HIP error at %s:%d code=%d(%s) \"%s\"\n", file,
                      line, static_cast<int>(result),
                      compat_get_error_string(result), func);
         std::exit(EXIT_FAILURE);
     }
-}
-
-inline bool find_flag_value(int argc, const char **argv, const char *name,
-                            const char **value) {
-    const std::size_t name_length = std::strlen(name);
-    for (int i = 1; i < argc; ++i) {
-        const char *argument = argv[i];
-        if (argument == nullptr) {
-            continue;
-        }
-        if (argument[0] == '-' && argument[1] == '-') {
-            argument += 1;
-        }
-        if (std::strncmp(argument, name, name_length) != 0) {
-            continue;
-        }
-        if (argument[name_length] != '=') {
-            continue;
-        }
-        *value = argument + name_length + 1;
-        return true;
-    }
-    return false;
 }
 
 }  // namespace cuda_samples_compat

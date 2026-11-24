@@ -1,9 +1,13 @@
 {
+  "schema_version": 1,
   "sample": "cuda-samples-v12.0/vectorAdd",
-  "source": "third-party/cuda-samples/Samples/0_Introduction/vectorAdd/vectorAdd.cu",
-  "include_dirs": ["third-party/cuda-samples/Common"],
+  "cuda_samples_commit": "2b689228b746248b7bb7d2778d5ea0701669f7d3",
+  "source": "../../third-party/cuda-samples/Samples/0_Introduction/vectorAdd/vectorAdd.cu",
+  "include_dirs": ["../../third-party/cuda-samples/Common"],
   "libraries": [],
   "success_marker": "Test PASSED",
   "expected": "hipify-direct",
-  "include_redirects": {}
+  "expected_redirects": 0,
+  "include_redirects": {},
+  "optional_redirects": []
 }
