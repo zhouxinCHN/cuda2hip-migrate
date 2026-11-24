@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cuda2hip-migrate"
+version = "0.1.0"
+description = "Deterministic HIPIFY post-processing and CUDA probe validation for ROCm"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+keywords = ["cuda", "hip", "rocm", "hipify", "migration"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development :: Build Tools",
+]
+
+[project.optional-dependencies]
+dev = ["build>=1.2", "ruff>=0.6"]
+
+[project.scripts]
+cuda2hip-migrate = "cuda2hip_migrate.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+cuda2hip_migrate = ["probes/*.cu"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
