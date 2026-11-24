@@ -16,7 +16,14 @@ class ProbeDiscoveryTests(unittest.TestCase):
         self.assertIn("probe_managed_memory", names)
         self.assertIn("probe_kernel_dynamic_smem", names)
         self.assertIn("probe_cublas_gemm", names)
+        self.assertIn("probe_texture_object", names)
         self.assertEqual(names, tuple(sorted(names)))
+
+    def test_texture_probe_uses_texture_object(self) -> None:
+        source = probe_source_text("probe_texture_object")
+        self.assertIn("cudaCreateTextureObject", source)
+        self.assertIn("tex1Dfetch", source)
+        self.assertIn("RESULT=PASS", source)
 
     def test_cublas_probe_uses_library_call(self) -> None:
         source = probe_source_text("probe_cublas_gemm")

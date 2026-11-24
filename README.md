@@ -4,7 +4,7 @@ Deterministic post-HIPIFY processing and standalone CUDA probe validation for
 ROCm.
 
 This project is an early prototype. It proves the execution path and currently
-contains one source rule; it is not a complete CUDA-to-HIP migration tool. The
+contains two source rules; it is not a complete CUDA-to-HIP migration tool. The
 project is self-contained and can be promoted to its own Git repository.
 
 ## Scope
@@ -47,6 +47,7 @@ make probe-stream
 make probe-managed
 make probe-smem
 make probe-cublas
+make probe-texture
 ```
 
 `make` sets `PYTHONPATH=src`, so no installation is needed for development.
@@ -88,6 +89,7 @@ The architecture is taken from `--arch`, then `HIP_ARCH`, then `rocminfo`.
 | `probe_managed_memory` | managed (unified) memory written by the GPU and read by the host | HIPIFY direct |
 | `probe_kernel_dynamic_smem` | dynamic shared memory, `__syncthreads`, multi-block reduction | HIPIFY direct |
 | `probe_cublas_gemm` | cuBLAS SGEMM on device buffers (library layer) | fixed by rule + link flag |
+| `probe_texture_object` | linear texture object with `tex1Dfetch` reads | HIPIFY direct |
 
 Planned probes are listed in the parent migration plan, not added ahead of
 review. Add one probe at a time and stop for review before continuing.
@@ -203,7 +205,7 @@ probe commands and must be recorded separately.
 
 ## Known boundaries
 
-- Only one deterministic rule is implemented.
+- Only two deterministic rules are implemented.
 - ROCm 10.0 has not been validated.
 - `hipify-clang` may print `ptxas`/`nvlink` architecture diagnostics while still
   exiting successfully and producing valid output; the runner trusts the exit

@@ -1,7 +1,7 @@
 PYTHON ?= python3
 export PYTHONPATH := $(CURDIR)/src
 
-.PHONY: all test list probe-malloc probe-pinned probe-stream probe-managed probe-smem probe-cublas probes install build clean
+.PHONY: all test list probe-malloc probe-pinned probe-stream probe-managed probe-smem probe-cublas probe-texture probes install build clean
 
 all: test
 
@@ -29,7 +29,10 @@ probe-smem:
 probe-cublas:
 	$(PYTHON) -m cuda2hip_migrate run --probe probe_cublas_gemm
 
-probes: probe-malloc probe-pinned probe-stream probe-managed probe-smem probe-cublas
+probe-texture:
+	$(PYTHON) -m cuda2hip_migrate run --probe probe_texture_object
+
+probes: probe-malloc probe-pinned probe-stream probe-managed probe-smem probe-cublas probe-texture
 
 install:
 	$(PYTHON) -m pip install -e .

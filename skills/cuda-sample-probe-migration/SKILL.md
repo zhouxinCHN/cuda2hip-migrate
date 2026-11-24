@@ -41,6 +41,7 @@ new rule or human review.
 | `probe_managed_memory` | HIPIFY direct | 0 |
 | `probe_kernel_dynamic_smem` | HIPIFY direct | 0 |
 | `probe_cublas_gemm` | rule-fixed + link flag | `HIP-CUBLAS-INCLUDE-001` |
+| `probe_texture_object` | HIPIFY direct | 0 |
 
 Implemented rule:
 
