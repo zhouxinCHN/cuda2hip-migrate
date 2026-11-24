@@ -120,12 +120,14 @@ committed.
 | `vectorAdd` | external-source path only; HIPIFY maps its helper include away and the sample calls no helper | HIPIFY direct, C1/C2/C3 (`smoke-vectoradd`) | 0 |
 | `simpleOccupancy` | Common overlay is used and `checkCudaErrors` runs; built `-O0` because the sample's own `i * i` overflows `int` | HIPIFY direct + overlay, C1/C2/C3 | 0 |
 | `fp16ScalarProduct` | overlay's `findCudaDevice` runs to completion; quoted includes; `half2` intrinsics vs native | HIPIFY direct + overlay, C1/C2/C3 | 0 |
+| `cppOverload` | kernel overloads via function pointers; `cudaFuncSetCacheConfig` / `cudaFuncGetAttributes`; secondary `.cuh` compiled but not translated | HIPIFY direct + overlay, C1/C2/C3 | 0 |
 | `matrixMul` | overlay compiles and `findCudaDevice` runs; `hipProfilerStart` returns 801 on this platform | **blocked** at C2 | 0 |
 
 ```bash
 make smoke-vectoradd
 make sample-simpleoccupancy
 make sample-fp16scalarproduct
+make sample-cppoverload
 make sample-matrixmul
 ```
 
@@ -186,8 +188,10 @@ Evidence: [`common_overlay.md`](docs/evidence/cuda_samples_12_0/common_overlay.m
 [`matrixMul.md`](docs/evidence/cuda_samples_12_0/matrixMul.md).
 
 Do not claim cuda-samples or `Common` support beyond the rows above. Sample
-Makefiles/CMake projects, data files, multi-file samples, unimplemented helpers
-and other samples are unclassified.
+Makefiles/CMake projects, data files, unimplemented helpers and other samples are
+unclassified. Secondary source files: only the main `.cu` is translated; a
+sample's `.cuh`/`.h` is compiled as HIP but never HIPIFY-ed, so a secondary file
+that calls CUDA runtime APIs is not covered.
 
 ## Rules
 

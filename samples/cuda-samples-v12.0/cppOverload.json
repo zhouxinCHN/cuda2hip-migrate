@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "sample": "cuda-samples-v12.0/cppOverload",
+  "cuda_samples_commit": "2b689228b746248b7bb7d2778d5ea0701669f7d3",
+  "source": "../../third-party/cuda-samples/Samples/0_Introduction/cppOverload/cppOverload.cu",
+  "include_dirs": [
+    "../../compat/cuda-samples-v12.0/include",
+    "../../third-party/cuda-samples/Common",
+    "../../third-party/cuda-samples/Samples/0_Introduction/cppOverload"
+  ],
+  "libraries": [],
+  "success_marker": "simple_kernel(const int *pIn1, const int *pIn2, int *pOut, int a) PASSED",
+  "expected": "hipify-direct",
+  "expected_redirects": 1,
+  "include_redirects": {
+    "helper_cuda.h": "cuda_samples_compat/helper_cuda.h"
+  },
+  "optional_redirects": []
+}
