@@ -129,6 +129,19 @@ class HipifyErrorDetectionTests(unittest.TestCase):
         self.assertIn("[HIPIFY] error", HIPIFY_ERROR_MARKERS)
         self.assertIn("Error while processing", HIPIFY_ERROR_MARKERS)
 
+    def test_benign_ptxas_diagnostics_are_not_failures(self) -> None:
+        """Successful runs print ``error:`` lines for ptxas/nvlink; not fatal."""
+        output = (
+            "error: must pass in an explicit nvptx64 gpu architecture to 'ptxas'\n"
+            "error: must pass in an explicit nvptx64 gpu architecture to 'nvlink'\n"
+            " !!!!!!! CUDA SDK version detected: 19\n"
+        )
+        self.assertEqual(hipify_report_errors(output), ())
+
+    def test_bare_error_prefix_is_not_a_marker(self) -> None:
+        self.assertNotIn("error: ", HIPIFY_ERROR_MARKERS)
+        self.assertNotIn("error:", HIPIFY_ERROR_MARKERS)
+
 
 class CudartVersionSpecTests(unittest.TestCase):
     def _write_spec(self, directory: str, extra: str) -> Path:

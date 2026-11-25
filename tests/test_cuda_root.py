@@ -51,11 +51,13 @@ class SyntheticRootTests(unittest.TestCase):
             libdevice = root / "libdevice"
             libdevice.mkdir()
             (libdevice / "libdevice.10.bc").write_text("", encoding="utf-8")
-            (libdevice.parent / "bin").mkdir(parents=True, exist_ok=True)
+            toolkit_bin = root / "toolkit" / "bin"
+            toolkit_bin.mkdir(parents=True)
 
             with mock.patch.object(cuda_root, "_candidate_roots", return_value=[]), \
                  mock.patch.object(cuda_root, "SYSTEM_INCLUDE", system_include), \
-                 mock.patch.object(cuda_root, "SYSTEM_LIBDEVICE", libdevice):
+                 mock.patch.object(cuda_root, "SYSTEM_LIBDEVICE", libdevice), \
+                 mock.patch.object(cuda_root, "_system_bin_dir", return_value=toolkit_bin):
                 resolved = cuda_root.resolve_cuda_root(root / "work")
 
             self.assertTrue(resolved.synthetic)
@@ -67,6 +69,26 @@ class SyntheticRootTests(unittest.TestCase):
                 (resolved.path / "nvvm" / "libdevice" / "libdevice.10.bc").is_symlink()
             )
             self.assertTrue((resolved.path / "bin").is_symlink())
+
+    def test_synthetic_root_without_bin_is_rejected(self) -> None:
+        """Without bin/ hipify reports CUDA SDK version 0, exits 1 and writes nothing."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            system_include = root / "sys-include"
+            system_include.mkdir()
+            (system_include / "cuda_runtime.h").write_text("", encoding="utf-8")
+            libdevice = root / "libdevice"
+            libdevice.mkdir()
+            (libdevice / "libdevice.10.bc").write_text("", encoding="utf-8")
+
+            with mock.patch.object(cuda_root, "_candidate_roots", return_value=[]), \
+                 mock.patch.object(cuda_root, "SYSTEM_INCLUDE", system_include), \
+                 mock.patch.object(cuda_root, "SYSTEM_LIBDEVICE", libdevice), \
+                 mock.patch.object(cuda_root, "_system_bin_dir", return_value=None):
+                with self.assertRaises(cuda_root.CudaRootError) as context:
+                    cuda_root.resolve_cuda_root(root / "work")
+            self.assertIn("bin/", str(context.exception))
+            self.assertFalse((root / "work" / "cuda-root").exists())
 
     def test_standard_layout_is_preferred(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

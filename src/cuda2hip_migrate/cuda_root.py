@@ -79,7 +79,17 @@ def _format_version(version: int | None) -> str:
 
 
 def _is_complete(root: Path) -> bool:
-    return (root / RUNTIME_HEADER).is_file() and (root / LIBDEVICE).is_file()
+    """A usable root has headers, libdevice and the toolchain binaries.
+
+    ``bin/`` is part of the contract: without it hipify-clang reports
+    ``CUDA SDK version detected: 0``, fails every CUDA identifier, exits 1 and
+    writes no output.
+    """
+    return (
+        (root / RUNTIME_HEADER).is_file()
+        and (root / LIBDEVICE).is_file()
+        and (root / TOOLCHAIN_BIN).is_dir()
+    )
 
 
 def _system_bin_dir() -> Path | None:
@@ -114,7 +124,7 @@ def resolve_cuda_root(work_dir: Path) -> CudaRoot:
     work_dir = Path(work_dir).resolve()
 
     for label, candidate in _candidate_roots():
-        if _is_complete(candidate) and (candidate / TOOLCHAIN_BIN).is_dir():
+        if _is_complete(candidate):
             version = _cuda_version(candidate / "include")
             return CudaRoot(
                 path=candidate.resolve(),
@@ -128,14 +138,20 @@ def resolve_cuda_root(work_dir: Path) -> CudaRoot:
         SYSTEM_LIBDEVICE / "libdevice.10.bc"
     ).is_file():
         version = _cuda_version(SYSTEM_INCLUDE)
+        bin_dir = _system_bin_dir()
+        if bin_dir is None:
+            # Fail before creating anything: a half-built root is worse than none.
+            raise CudaRootError(
+                "found CUDA headers and libdevice but no toolchain bin/ directory; "
+                "hipify-clang cannot translate without it. Install the toolkit "
+                "binaries or set CUDA_PATH to a complete installation"
+            )
         synthetic = work_dir / "cuda-root"
         links = [
             (synthetic / "include", SYSTEM_INCLUDE),
             (synthetic / LIBDEVICE, SYSTEM_LIBDEVICE / "libdevice.10.bc"),
+            (synthetic / TOOLCHAIN_BIN, bin_dir),
         ]
-        bin_dir = _system_bin_dir()
-        if bin_dir is not None:
-            links.append((synthetic / TOOLCHAIN_BIN, bin_dir))
         for link, target in links:
             link.parent.mkdir(parents=True, exist_ok=True)
             if link.is_symlink() or link.exists():

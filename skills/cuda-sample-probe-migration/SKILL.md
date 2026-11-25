@@ -134,27 +134,36 @@ See `docs/evidence/probe_pinned_host_mem_pre_rule.md`.
 library must be linked. See
 `docs/evidence/probe_cublas_gemm_pre_rule.md`.
 
-## hipify-clang environment rules
+## hipify-clang environment
 
-Measured on ROCm 7.2.4; each of these costs an hour to rediscover.
+Measured on ROCm 7.2.4 / hipify-clang 22.0.0git. Separate what the tool requires
+from what this project chose; do not state a convention as a tool fact.
 
-1. `hipify-clang` needs a CUDA root with `include/`, `nvvm/libdevice/` **and
-   `bin/`**. The Debian/Ubuntu toolkit splits these, so the runner builds a
-   symlinked root in the artifact directory and records it in `cuda-root.json`.
-2. Without `bin/` hipify logs `CUDA SDK version detected: 0`, then fails every
-   CUDA identifier **and still exits 0**.
-3. `--cuda-path` must be absolute.
-4. Never put the source directory on hipify's include path; it treats the
-   translation unit as a local header and translation fails.
-5. `--skip-excluded-preprocessor-conditional-blocks` keeps Windows-only code out
-   of the parse; `--local-headers` is what makes a quoted `*.cuh` translate. The
-   translated header appears next to its input as `<name>.hip` and the runner
-   moves it into `hipified/`.
-6. A sample that branches on `CUDART_VERSION` needs the macro defined (spec key
-   `cudart_version`), because HIP does not define it and `#if CUDART_VERSION <
-   N` then becomes live code.
-7. Do not trust the exit status alone: the runner also fails on `[HIPIFY] error`
-   / `Error while processing`, and on a missing or empty output file.
+**Tool behaviour**
+
+1. A CUDA root needs `include/`, `nvvm/libdevice/` **and `bin/`**. With all
+   three: `CUDA SDK version detected: 19`, exit 0, output written. Without
+   `bin/`: detection `0`, `cannot find libdevice` / `cannot find CUDA
+   installation`, **exit 1, no output.**
+2. `--skip-excluded-preprocessor-conditional-blocks` keeps Windows-only code out
+   of the parse.
+3. `--local-headers` makes a quoted `*.cuh` translate. The translated header
+   appears next to its input as `<name>.hip`; the runner moves it into
+   `hipified/`.
+4. A sample branching on `CUDART_VERSION` needs the macro defined (spec key
+   `cudart_version`): HIP does not define it, so `#if CUDART_VERSION < N` becomes
+   live code.
+5. The exit status alone is not enough, but a bare `error:` is not a failure
+   signal either — successful runs print `ptxas`/`nvlink` diagnostics in that
+   form. The runner fails on `[HIPIFY] error` / `Error while processing` and on a
+   missing or empty output file.
+
+**Project conventions**
+
+6. `--cuda-path` is always absolute. This hipify-clang also accepted a relative
+   path in a minimal run.
+7. The source directory is kept off hipify's include path. It did break a real
+   translation, but the same flag on a minimal source succeeded.
 
 ## Build specs
 
