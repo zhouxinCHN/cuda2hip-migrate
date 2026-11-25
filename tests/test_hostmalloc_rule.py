@@ -66,6 +66,17 @@ class HostMallocArityRuleTests(unittest.TestCase):
         self.assertEqual(output, source)
         self.assertEqual(changes, [])
 
+    def test_member_call_is_unchanged(self) -> None:
+        """A qualified name is not the HIP API and must not be rewritten."""
+        for source in (
+            "wrapper.hipHostMalloc(&p, 4096, 0, hipHostMallocDefault);\n",
+            "wrapper->hipHostMalloc(&p, 4096, 0, hipHostMallocDefault);\n",
+            "hip::hipHostMalloc(&p, 4096, 0, hipHostMallocDefault);\n",
+        ):
+            output, changes = apply_post_hipify_rules(source)
+            self.assertEqual(output, source)
+            self.assertEqual(changes, [])
+
     def test_rule_is_idempotent(self) -> None:
         source = "hipHostMalloc(&p, 4096, 0, hipHostMallocDefault);\n"
         once, first_changes = apply_post_hipify_rules(source)

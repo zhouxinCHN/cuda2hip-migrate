@@ -240,6 +240,13 @@ flags are printed as `[BUILD] flags=...` and recorded in `build.log`. Currently
 only `probe_cublas_gemm` uses a build spec. Validation tests are in
 `tests/test_build_spec.py`.
 
+A sample spec may additionally carry `cudart_version` (integer, e.g. `12000`).
+It defines `CUDART_VERSION` for both the HIPIFY parse and the `hipcc` build. Set
+it for any sample that branches on that macro: HIPIFY keeps skipped conditional
+blocks verbatim and HIP does not define it, so an undefined identifier evaluates
+to `0` and a dead CUDA block becomes live code. Validation tests are in
+`tests/test_hipify_command.py`.
+
 ## Acceptance
 
 - **C1**: `hipcc` build succeeds.
@@ -257,6 +264,7 @@ Each run creates:
 |-- source/<name>.cu           # original source, byte-identical copy
 |-- preprocessed/<name>.cu     # only with include redirects; HIPIFY input
 |-- redirects.json             # redirect records, [] when none applied
+|-- cuda-root.json             # CUDA installation hipify-clang parsed against
 |-- hipified/<name>.hip.cu     # untouched HIPIFY output
 |-- adapted/<name>.hip.cu      # rules applied; built source
 |-- hipify.diff                # HIPIFY input -> HIPIFY output, audit only
@@ -266,6 +274,12 @@ Each run creates:
 |-- run.log
 `-- <name>                     # executable
 ```
+
+`cuda-root.json` records the resolved installation, whether the runner had to
+synthesise a symlinked root for the Debian/Ubuntu toolkit layout, and the CUDA
+version hipify-clang actually parsed. A sample written for CUDA 12.0 that is
+parsed against newer headers is a real limitation, so it is recorded rather than
+assumed.
 
 Generated artifacts are written to `/tmp` by default and are not committed.
 

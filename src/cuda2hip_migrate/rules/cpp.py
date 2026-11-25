@@ -144,6 +144,10 @@ def find_calls(text: str, target: str) -> list[tuple[int, int, int, list[str]]]:
     """Find ``target(...)`` calls outside comments and literals.
 
     Returns tuples of (identifier_start, identifier_end, closing_paren, args).
+
+    A qualified name is not a plain call: ``wrapper.hipHostMalloc(...)``,
+    ``ptr->hipHostMalloc(...)`` and ``ns::hipHostMalloc(...)`` are skipped, so a
+    rule cannot rewrite a member or namespaced function it does not understand.
     """
     calls: list[tuple[int, int, int, list[str]]] = []
     index = 0
@@ -177,11 +181,16 @@ def find_calls(text: str, target: str) -> list[tuple[int, int, int, list[str]]]:
             index += 1
             continue
 
+        start = index
         end = index + 1
         while end < length and _is_ident_char(text[end]):
             end += 1
         identifier = text[index:end]
         if identifier != target:
+            index = end
+            continue
+
+        if _is_qualified(text, start):
             index = end
             continue
 
@@ -201,3 +210,9 @@ def find_calls(text: str, target: str) -> list[tuple[int, int, int, list[str]]]:
         index = close_index + 1
 
     return calls
+
+
+def _is_qualified(text: str, start: int) -> bool:
+    """Return True when the identifier at ``start`` is a member/qualified name."""
+    prefix = text[:start].rstrip()
+    return prefix.endswith((".", "::", "->"))

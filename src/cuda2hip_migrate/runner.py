@@ -5,11 +5,13 @@ from __future__ import annotations
 import json
 import logging
 import re
+import shutil
 import tempfile
 from dataclasses import dataclass
 from importlib.resources import files
 from pathlib import Path
 
+from cuda2hip_migrate.cuda_root import CudaRoot, CudaRootError, resolve_cuda_root
 from cuda2hip_migrate.preprocess import (
     apply_include_redirects,
     unmatched_redirects,
@@ -31,6 +33,11 @@ PROBE_SUFFIX = ".cu"
 BUILD_SPEC_SUFFIX = ".build.json"
 ALLOWED_BUILD_KEYS = frozenset({"libraries"})
 DEFAULT_SUCCESS_MARKER = "RESULT=PASS"
+
+#: hipify-clang can exit 0 while reporting a failure; these markers are checked
+#: in addition to the exit status and the existence of the output file.
+HIPIFY_ERROR_MARKERS = ("[HIPIFY] error", "Error while processing")
+HIP_TAIL = ".hip"
 
 
 class ProbeError(RuntimeError):
@@ -123,6 +130,7 @@ SPEC_KEYS = frozenset(
         "optional_redirects",
         "hipify_forced_includes",
         "optimization",
+        "cudart_version",
     }
 )
 SPEC_SCHEMA_VERSION = 1
@@ -148,6 +156,7 @@ class SampleSpec:
     optimization: str
     schema_version: int
     cuda_samples_commit: str | None
+    cudart_version: int | None = None
 
 
 def _spec_string_list(path: Path, raw: dict[str, object], key: str) -> tuple[str, ...]:
@@ -255,6 +264,17 @@ def load_sample_spec(path: Path) -> SampleSpec:
             "spec", f"{path}: 'expected_redirects' must be a non-negative integer"
         )
 
+    cudart_version = raw.get("cudart_version")
+    if cudart_version is not None and (
+        isinstance(cudart_version, bool)
+        or not isinstance(cudart_version, int)
+        or cudart_version < 1000
+    ):
+        raise ProbeError(
+            "spec",
+            f"{path}: 'cudart_version' must be a CUDA_VERSION integer such as 12000",
+        )
+
     include_dirs = tuple(
         base_dir / item for item in _spec_string_list(path, raw, "include_dirs")
     )
@@ -280,6 +300,7 @@ def load_sample_spec(path: Path) -> SampleSpec:
         optimization=str(optimization),
         schema_version=int(schema_version),
         cuda_samples_commit=None if commit is None else str(commit),
+        cudart_version=None if cudart_version is None else int(cudart_version),
     )
 
 
@@ -431,7 +452,61 @@ def run_sample_spec(path: Path, *, out_dir: Path | None = None, arch: str | None
         forced_includes=spec.hipify_forced_includes,
         expected=spec.expected,
         optimization=spec.optimization,
+        cudart_version=spec.cudart_version,
     )
+
+
+def hipify_report_errors(output: str) -> tuple[str, ...]:
+    """Return the failure markers hipify-clang printed despite its exit status."""
+    return tuple(marker for marker in HIPIFY_ERROR_MARKERS if marker in output)
+
+
+def build_hipify_command(
+    *,
+    hipify: str,
+    source: Path,
+    output: Path,
+    cuda: CudaRoot,
+    include_dirs: tuple[Path, ...],
+    forced_includes: tuple[Path, ...] = (),
+    cudart_version: int | None = None,
+) -> list[str]:
+    """Build the hipify-clang command line.
+
+    Kept separate from the run so the flags that are easy to get wrong are
+    covered by unit tests instead of by a GPU:
+
+    - ``--cuda-path`` must be absolute or hipify-clang cannot find CUDA;
+    - ``--skip-excluded-preprocessor-conditional-blocks`` keeps Windows-only
+      code out of the parse;
+    - ``--local-headers`` is what makes a quoted local header (``*.cuh``)
+      translate at all;
+    - ``CUDART_VERSION`` must be defined when a sample branches on it, because
+      HIP does not define it and an undefined identifier evaluates to 0, which
+      turns a skipped CUDA block into live code.
+    """
+    command = [
+        hipify,
+        str(source),
+        f"--cuda-path={cuda.path}",
+        "--skip-excluded-preprocessor-conditional-blocks",
+        "--local-headers",
+        "--no-backup",
+        "-o",
+        str(output),
+    ]
+    for directory in include_dirs:
+        command += ["-I", str(directory)]
+
+    clang_args: list[str] = []
+    if cudart_version is not None:
+        clang_args.append(f"-DCUDART_VERSION={cudart_version}")
+    for forced in forced_includes:
+        # hipify-clang forwards everything after "--" to clang.
+        clang_args += ["-include", str(forced)]
+    if clang_args:
+        command += ["--", *clang_args]
+    return command
 
 
 def _run_source(
@@ -450,6 +525,7 @@ def _run_source(
     forced_includes: tuple[Path, ...] = (),
     expected: str | None,
     optimization: str,
+    cudart_version: int | None = None,
 ) -> RunResult:
     hipify = require_tool("hipify-clang")
     hipcc = require_tool("hipcc")
@@ -459,6 +535,16 @@ def _run_source(
         raise ProbeError("environment", str(error)) from error
 
     artifacts = (out_dir or Path(tempfile.mkdtemp(prefix=f"{name}-"))).resolve()
+    try:
+        cuda = resolve_cuda_root(artifacts)
+    except CudaRootError as error:
+        raise ProbeError("environment", str(error)) from error
+    (artifacts / "cuda-root.json").write_text(
+        json.dumps(cuda.as_dict(), indent=2) + "\n", encoding="utf-8"
+    )
+    logger.info("[CUDA-ROOT] %s (%s)", cuda.path, cuda.detection)
+    logger.info("[CUDA-ROOT] version=%s synthetic=%s", cuda.version_string, cuda.synthetic)
+
     source_dir = artifacts / "source"
     hipified_dir = artifacts / "hipified"
     adapted_dir = artifacts / "adapted"
@@ -518,25 +604,51 @@ def _run_source(
     if include_flags:
         logger.info("[INCLUDE] %s", " ".join(include_flags))
 
-    hipify_command = [hipify, str(hipify_input), *include_flags, "-o", str(hipified)]
+    hipify_command = build_hipify_command(
+        hipify=hipify,
+        source=hipify_input,
+        output=hipified,
+        cuda=cuda,
+        include_dirs=include_dirs,
+        forced_includes=forced_includes,
+        cudart_version=cudart_version,
+    )
     if forced_includes:
-        # hipify-clang forwards everything after "--" to clang; -include is a
-        # clang option, so it must come after the separator.
-        clang_args: list[str] = []
-        for forced in forced_includes:
-            clang_args += ["-include", str(forced)]
-        hipify_command += ["--", *clang_args]
-        logger.info("[HIPIFY-PARSE-INCLUDE] %s", " ".join(clang_args))
+        logger.info("[HIPIFY-PARSE-INCLUDE] forced includes=%d", len(forced_includes))
 
     hipify_log = artifacts / "hipify.log"
     result = run_logged(hipify_command, hipify_log)
-    if result.returncode != 0 or not hipified.is_file():
+    hipify_output = log_tail(hipify_log, lines=200)
+    if result.returncode != 0:
         raise ProbeError(
             "hipify",
-            "HIPIFY failed",
-            tail=log_tail(hipify_log),
+            f"HIPIFY failed with exit code {result.returncode}",
+            tail=hipify_output,
             artifacts=artifacts,
         )
+    # hipify-clang can exit 0 while reporting a failure in its output.
+    reported = hipify_report_errors(hipify_output)
+    if reported:
+        raise ProbeError(
+            "hipify",
+            f"HIPIFY reported an error despite exit code 0 ({', '.join(reported)})",
+            tail=hipify_output,
+            artifacts=artifacts,
+        )
+    if not hipified.is_file() or hipified.stat().st_size == 0:
+        raise ProbeError(
+            "hipify",
+            "HIPIFY produced no output",
+            tail=hipify_output,
+            artifacts=artifacts,
+        )
+
+    # hipify-clang writes translated local headers next to their input with a
+    # ".hip" suffix; move them into the hipified tree so quoted includes resolve.
+    for produced in sorted(hipify_input.parent.glob(f"*{HIP_TAIL}")):
+        target = hipified_dir / produced.name[: -len(HIP_TAIL)]
+        shutil.move(str(produced), str(target))
+        logger.info("[HIPIFY-LOCAL] %s", target.name)
 
     (artifacts / "hipify.diff").write_text(
         unified_diff(hipify_input, hipified), encoding="utf-8"
@@ -577,6 +689,9 @@ def _run_source(
     if optimization != DEFAULT_OPTIMIZATION:
         logger.info("[BUILD] optimization=%s", optimization)
 
+    define_flags = (
+        [f"-DCUDART_VERSION={cudart_version}"] if cudart_version is not None else []
+    )
     build_log = artifacts / "build.log"
     result = run_logged(
         [
@@ -586,6 +701,7 @@ def _run_source(
             "-std=c++17",
             optimization,
             f"--offload-arch={detected_arch}",
+            *define_flags,
             *include_flags,
             *build_flags,
             str(adapted),

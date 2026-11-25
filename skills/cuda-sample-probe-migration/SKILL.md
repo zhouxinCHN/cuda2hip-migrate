@@ -134,6 +134,28 @@ See `docs/evidence/probe_pinned_host_mem_pre_rule.md`.
 library must be linked. See
 `docs/evidence/probe_cublas_gemm_pre_rule.md`.
 
+## hipify-clang environment rules
+
+Measured on ROCm 7.2.4; each of these costs an hour to rediscover.
+
+1. `hipify-clang` needs a CUDA root with `include/`, `nvvm/libdevice/` **and
+   `bin/`**. The Debian/Ubuntu toolkit splits these, so the runner builds a
+   symlinked root in the artifact directory and records it in `cuda-root.json`.
+2. Without `bin/` hipify logs `CUDA SDK version detected: 0`, then fails every
+   CUDA identifier **and still exits 0**.
+3. `--cuda-path` must be absolute.
+4. Never put the source directory on hipify's include path; it treats the
+   translation unit as a local header and translation fails.
+5. `--skip-excluded-preprocessor-conditional-blocks` keeps Windows-only code out
+   of the parse; `--local-headers` is what makes a quoted `*.cuh` translate. The
+   translated header appears next to its input as `<name>.hip` and the runner
+   moves it into `hipified/`.
+6. A sample that branches on `CUDART_VERSION` needs the macro defined (spec key
+   `cudart_version`), because HIP does not define it and `#if CUDART_VERSION <
+   N` then becomes live code.
+7. Do not trust the exit status alone: the runner also fails on `[HIPIFY] error`
+   / `Error while processing`, and on a missing or empty output file.
+
 ## Build specs
 
 A probe that needs a library ships `probes/<probe>.build.json`:

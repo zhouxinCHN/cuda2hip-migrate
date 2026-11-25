@@ -1,0 +1,112 @@
+"""Tests for CUDA-root resolution used by hipify-clang."""
+
+from __future__ import annotations
+
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+from cuda2hip_migrate import cuda_root
+
+
+class VersionFormattingTests(unittest.TestCase):
+    def test_reformats_cuda_version(self) -> None:
+        self.assertEqual(cuda_root._format_version(12000), "12.0")
+        self.assertEqual(cuda_root._format_version(12090), "12.9")
+        self.assertEqual(cuda_root._format_version(None), "unknown")
+
+    def test_reads_version_from_header(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            include = Path(directory)
+            (include / "cuda.h").write_text(
+                "#define CUDA_VERSION 12000  /* 12.0 */\n", encoding="utf-8"
+            )
+            self.assertEqual(cuda_root._cuda_version(include), 12000)
+
+    def test_missing_header_returns_none(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertIsNone(cuda_root._cuda_version(Path(directory)))
+
+
+class SyntheticRootTests(unittest.TestCase):
+    def test_error_when_no_installation_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.object(cuda_root, "_candidate_roots", return_value=[]), \
+                 mock.patch.object(cuda_root, "SYSTEM_INCLUDE", Path(directory) / "nope"), \
+                 mock.patch.object(cuda_root, "SYSTEM_LIBDEVICE", Path(directory) / "nope2"):
+                with self.assertRaises(cuda_root.CudaRootError):
+                    cuda_root.resolve_cuda_root(Path(directory))
+
+    def test_synthetic_root_links_include_libdevice_and_bin(self) -> None:
+        """bin/ is load-bearing: without it hipify reports CUDA SDK version 0."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            system_include = root / "sys-include"
+            system_include.mkdir()
+            (system_include / "cuda_runtime.h").write_text("", encoding="utf-8")
+            (system_include / "cuda.h").write_text(
+                "#define CUDA_VERSION 12000\n", encoding="utf-8"
+            )
+            libdevice = root / "libdevice"
+            libdevice.mkdir()
+            (libdevice / "libdevice.10.bc").write_text("", encoding="utf-8")
+            (libdevice.parent / "bin").mkdir(parents=True, exist_ok=True)
+
+            with mock.patch.object(cuda_root, "_candidate_roots", return_value=[]), \
+                 mock.patch.object(cuda_root, "SYSTEM_INCLUDE", system_include), \
+                 mock.patch.object(cuda_root, "SYSTEM_LIBDEVICE", libdevice):
+                resolved = cuda_root.resolve_cuda_root(root / "work")
+
+            self.assertTrue(resolved.synthetic)
+            self.assertEqual(resolved.version, 12000)
+            self.assertEqual(resolved.version_string, "12.0")
+            self.assertTrue(resolved.path.is_absolute())
+            self.assertTrue((resolved.path / "include").is_symlink())
+            self.assertTrue(
+                (resolved.path / "nvvm" / "libdevice" / "libdevice.10.bc").is_symlink()
+            )
+            self.assertTrue((resolved.path / "bin").is_symlink())
+
+    def test_standard_layout_is_preferred(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "include").mkdir()
+            (root / "include" / "cuda_runtime.h").write_text("", encoding="utf-8")
+            (root / "include" / "cuda.h").write_text(
+                "#define CUDA_VERSION 12090\n", encoding="utf-8"
+            )
+            (root / "nvvm" / "libdevice").mkdir(parents=True)
+            (root / "nvvm" / "libdevice" / "libdevice.10.bc").write_text(
+                "", encoding="utf-8"
+            )
+            (root / "bin").mkdir()
+
+            with mock.patch.object(
+                cuda_root, "_candidate_roots", return_value=[("test", root)]
+            ):
+                resolved = cuda_root.resolve_cuda_root(root / "work")
+
+            self.assertFalse(resolved.synthetic)
+            self.assertEqual(resolved.version, 12090)
+
+    def test_standard_layout_without_bin_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "include").mkdir()
+            (root / "include" / "cuda_runtime.h").write_text("", encoding="utf-8")
+            (root / "nvvm" / "libdevice").mkdir(parents=True)
+            (root / "nvvm" / "libdevice" / "libdevice.10.bc").write_text(
+                "", encoding="utf-8"
+            )
+
+            with mock.patch.object(
+                cuda_root, "_candidate_roots", return_value=[("test", root)]
+            ), mock.patch.object(cuda_root, "SYSTEM_INCLUDE", root / "nope"), \
+                 mock.patch.object(cuda_root, "SYSTEM_LIBDEVICE", root / "nope2"):
+                with self.assertRaises(cuda_root.CudaRootError):
+                    cuda_root.resolve_cuda_root(root / "work")
+
+
+if __name__ == "__main__":
+    unittest.main()
