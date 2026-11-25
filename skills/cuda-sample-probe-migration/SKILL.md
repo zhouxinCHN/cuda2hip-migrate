@@ -156,7 +156,9 @@ from what this project chose; do not state a convention as a tool fact.
 5. The exit status alone is not enough, but a bare `error:` is not a failure
    signal either — successful runs print `ptxas`/`nvlink` diagnostics in that
    form. The runner fails on `[HIPIFY] error` / `Error while processing` and on a
-   missing or empty output file.
+   missing or empty output file. Translation failures exit non-zero; input and
+   config failures do not (a missing source file prints `[HIPIFY] error: source
+   file: ... doesn't exist` and exits 0).
 
 **Project conventions**
 
