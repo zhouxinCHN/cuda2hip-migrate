@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+artifacts/
+artifacts-rocm10/
+third-party/
+
+# Local-only analysis, not published
+docs/api-and-sample-changes.md
+docs/development-plan.md

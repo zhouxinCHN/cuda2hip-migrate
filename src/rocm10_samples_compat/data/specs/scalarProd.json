@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "name": "scalarProd",
+  "path": "2_Concepts_and_Techniques/scalarProd",
+  "sources": ["scalarProd.cu", "scalarProd_cpu.cpp"],
+  "libraries": [],
+  "run": {"args": [], "timeout_seconds": 300},
+  "c3": {"mode": "marker", "marker": "Test passed"},
+  "notes": "Two translation units plus a quoted local header (scalarProd_kernel.cuh) that HIPIFY must hipify."
+}

@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "name": "simpleStreams",
+  "path": "0_Introduction/simpleStreams",
+  "sources": ["simpleStreams.cu"],
+  "libraries": [],
+  "run": {"args": [], "timeout_seconds": 300},
+  "c3": {"mode": "exit-status"},
+  "notes": "No success marker or internal verification; C3 is exit status only and is recorded as such."
+}

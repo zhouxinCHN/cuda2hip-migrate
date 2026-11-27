@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "name": "matrixMul",
+  "path": "0_Introduction/matrixMul",
+  "sources": ["matrixMul.cu"],
+  "libraries": ["rocprofiler-sdk-roctx"],
+  "run": {"args": [], "timeout_seconds": 300},
+  "c3": {"mode": "marker", "marker": "Result = PASS"},
+  "notes": "Uses checkCudaErrors, findCudaDevice and getCmdLineArgumentInt from the overlay. Brackets the compute with cudaProfilerStart/Stop, which HIP-PROFILER-ROCTX-001 routes to rocTX; that is why it links librocprofiler-sdk-roctx."
+}

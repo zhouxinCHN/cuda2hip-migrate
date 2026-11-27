@@ -1,0 +1,2664 @@
+{
+  "schema_version": 1,
+  "fixed_decisions": {
+    "target_rocm": "10.0.0",
+    "cuda_toolkit": "12.9",
+    "cuda_samples_tag": "v12.9",
+    "cuda_samples_commit": "cab7c66b4fcf35b09ea8fbc4c3c1a9272e92d997",
+    "deliverable_form": "skills"
+  },
+  "source": {
+    "repository": "https://github.com/NVIDIA/cuda-samples",
+    "tag": "v12.9",
+    "commit": "cab7c66b4fcf35b09ea8fbc4c3c1a9272e92d997",
+    "layout": "Samples"
+  },
+  "counts": {
+    "samples": 188,
+    "by_tier": {
+      "SEMANTIC_OR_LIBRARY": 78,
+      "BASIC": 26,
+      "SPECIAL": 54,
+      "DEFERRED_PLATFORM": 14,
+      "HIGH_RISK_REWRITE": 16
+    },
+    "by_category": {
+      "0_Introduction": 46,
+      "1_Utilities": 3,
+      "2_Concepts_and_Techniques": 32,
+      "3_CUDA_Features": 24,
+      "4_CUDA_Libraries": 34,
+      "5_Domain_Specific": 36,
+      "6_Performance": 5,
+      "7_libNVVM": 7,
+      "8_Platform_Specific": 1
+    }
+  },
+  "batches": {
+    "P0_baseline": [
+      "deviceQuery",
+      "vectorAdd",
+      "matrixMul",
+      "asyncAPI",
+      "simpleStreams",
+      "scalarProd"
+    ],
+    "P1_semantics_and_business": [
+      "simpleAtomicIntrinsics",
+      "simpleVoteIntrinsics",
+      "simpleTexture",
+      "convolutionFFT2D",
+      "NV12toBGRandResize",
+      "simpleCudaGraphs"
+    ],
+    "P1_probes": [
+      "inlinePTX",
+      "cdpSimplePrint",
+      "vectorAddDrv"
+    ],
+    "P2_remaining_basic": [
+      "clock",
+      "cudaOpenMP",
+      "fp16ScalarProduct",
+      "simpleAssert",
+      "simpleAttributes",
+      "simpleCallback",
+      "simpleMPI",
+      "simpleMultiCopy",
+      "simpleOccupancy",
+      "simplePrintf",
+      "simpleTemplates",
+      "simpleZeroCopy",
+      "template",
+      "deviceQueryDrv",
+      "topologyQuery",
+      "StreamPriorities",
+      "BlackScholes",
+      "quasirandomGenerator",
+      "LargeKernelParameter",
+      "alignedTypes"
+    ],
+    "P3_semantic_and_library": [
+      "UnifiedMemoryStreams",
+      "mergeSort",
+      "simpleAWBarrier",
+      "simpleCooperativeGroups",
+      "simpleCubemapTexture",
+      "simpleHyperQ",
+      "simpleLayeredTexture",
+      "simplePitchLinearTexture",
+      "simpleSurfaceWrite",
+      "systemWideAtomics",
+      "MC_EstimatePiInlineP",
+      "MC_EstimatePiInlineQ",
+      "MC_EstimatePiP",
+      "MC_EstimatePiQ",
+      "MC_SingleAsianOptionP",
+      "convolutionSeparable",
+      "dct8x8",
+      "eigenvalues",
+      "histogram",
+      "radixSortThrust",
+      "reduction",
+      "reductionMultiBlockCG",
+      "scan",
+      "segmentationTreeThrust",
+      "shfl_scan",
+      "sortingNetworks",
+      "threadFenceReduction",
+      "binaryPartitionCG",
+      "globalToShmemAsyncCopy",
+      "graphConditionalNodes",
+      "graphMemoryFootprint",
+      "jacobiCudaGraphs",
+      "newdelete",
+      "warpAggregatedAtomicsCG",
+      "FilterBorderControlNPP",
+      "MersenneTwisterGP11213",
+      "batchCUBLAS",
+      "boxFilterNPP",
+      "cannyEdgeDetectorNPP",
+      "conjugateGradient",
+      "conjugateGradientCudaGraphs",
+      "conjugateGradientMultiBlockCG",
+      "conjugateGradientPrecond",
+      "conjugateGradientUM",
+      "cuSolverDn_LinearSolver",
+      "cuSolverRf",
+      "cuSolverSp_LinearSolver",
+      "cuSolverSp_LowlevelCholesky",
+      "cuSolverSp_LowlevelQR",
+      "freeImageInteropNPP",
+      "histEqualizationNPP",
+      "lineOfSight",
+      "matrixMulCUBLAS",
+      "nvJPEG",
+      "nvJPEG_encoder",
+      "simpleCUBLAS",
+      "simpleCUBLASXT",
+      "simpleCUBLAS_LU",
+      "simpleCUFFT",
+      "simpleCUFFT_2d_MGPU",
+      "simpleCUFFT_MGPU",
+      "simpleCUFFT_callback",
+      "watershedSegmentationNPP",
+      "FDTD3d",
+      "HSOpticalFlow",
+      "SobolQRNG",
+      "binomialOptions",
+      "dwtHaar1D",
+      "dxtc",
+      "fastWalshTransform",
+      "UnifiedMemoryPerf",
+      "transpose"
+    ],
+    "P4_special": [
+      "clock_nvrtc",
+      "matrixMulDrv",
+      "matrixMulDynlinkJIT",
+      "matrixMul_nvrtc",
+      "simpleAssert_nvrtc",
+      "simpleAtomicIntrinsics_nvrtc",
+      "simpleCUDA2GL",
+      "simpleDrvRuntime",
+      "simpleIPC",
+      "simpleMultiGPU",
+      "simpleP2P",
+      "simpleTexture3D",
+      "simpleTextureDrv",
+      "vectorAddMMAP",
+      "vectorAdd_nvrtc",
+      "FunctionPointers",
+      "boxFilter",
+      "convolutionTexture",
+      "imageDenoising",
+      "particles",
+      "streamOrderedAllocation",
+      "streamOrderedAllocationIPC",
+      "streamOrderedAllocationP2P",
+      "threadMigration",
+      "bindlessTexture",
+      "cudaCompressibleMemory",
+      "graphMemoryNodes",
+      "memMapIPCDrv",
+      "ptxjit",
+      "jitLto",
+      "oceanFFT",
+      "randomFog",
+      "BlackScholes_nvrtc",
+      "Mandelbrot",
+      "MonteCarloMultiGPU",
+      "SobelFilter",
+      "bicubicTexture",
+      "bilateralFilter",
+      "binomialOptions_nvrtc",
+      "fluidsGL",
+      "marchingCubes",
+      "nbody",
+      "p2pBandwidthLatencyTest",
+      "postProcessGL",
+      "quasirandomGenerator_nvrtc",
+      "recursiveGaussian",
+      "simpleGL",
+      "simpleVulkan",
+      "simpleVulkanMMAP",
+      "smokeParticles",
+      "volumeFiltering",
+      "volumeRender",
+      "vulkanImageCUDA"
+    ],
+    "P5_high_risk_rewrite": [
+      "inlinePTX_nvrtc",
+      "interval",
+      "bf16TensorCoreGemm",
+      "cdpAdvancedQuicksort",
+      "cdpBezierTessellation",
+      "cdpQuadtree",
+      "cdpSimpleQuicksort",
+      "cudaTensorCoreGemm",
+      "dmmaTensorCoreGemm",
+      "immaTensorCoreGemm",
+      "tf32TensorCoreGemm",
+      "conjugateGradientMultiDeviceCG",
+      "stereoDisparity",
+      "cudaGraphsPerfScaling"
+    ],
+    "P6_deferred_platform": [
+      "EGLStream_CUDA_CrossGPU",
+      "EGLStream_CUDA_Interop",
+      "cudaNvSci",
+      "simpleD3D11",
+      "simpleD3D11Texture",
+      "simpleD3D12",
+      "cuda-c-linking",
+      "cuda-shared-memory",
+      "device-side-launch",
+      "ptxgen",
+      "simple",
+      "syscalls",
+      "uvmlite",
+      "Tegra"
+    ]
+  },
+  "samples": [
+    {
+      "path": "0_Introduction/UnifiedMemoryStreams",
+      "name": "UnifiedMemoryStreams",
+      "category": "0_Introduction",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "managed_memory",
+        "MPI_OpenMP",
+        "libraries"
+      ],
+      "libraries": [
+        "cuBLAS"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/asyncAPI",
+      "name": "asyncAPI",
+      "category": "0_Introduction",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/clock",
+      "name": "clock",
+      "category": "0_Introduction",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/clock_nvrtc",
+      "name": "clock_nvrtc",
+      "category": "0_Introduction",
+      "tier": "SPECIAL",
+      "features": [
+        "JIT_NVRTC"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/cudaOpenMP",
+      "name": "cudaOpenMP",
+      "category": "0_Introduction",
+      "tier": "BASIC",
+      "features": [
+        "MPI_OpenMP"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/fp16ScalarProduct",
+      "name": "fp16ScalarProduct",
+      "category": "0_Introduction",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/matrixMul",
+      "name": "matrixMul",
+      "category": "0_Introduction",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/matrixMulDrv",
+      "name": "matrixMulDrv",
+      "category": "0_Introduction",
+      "tier": "SPECIAL",
+      "features": [
+        "driver_module"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/matrixMulDynlinkJIT",
+      "name": "matrixMulDynlinkJIT",
+      "category": "0_Introduction",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics",
+        "VMM_IPC_mempool",
+        "JIT_NVRTC",
+        "graphs",
+        "driver_module"
+      ],
+      "libraries": [],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/matrixMul_nvrtc",
+      "name": "matrixMul_nvrtc",
+      "category": "0_Introduction",
+      "tier": "SPECIAL",
+      "features": [
+        "cooperative_groups",
+        "JIT_NVRTC"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/mergeSort",
+      "name": "mergeSort",
+      "category": "0_Introduction",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleAWBarrier",
+      "name": "simpleAWBarrier",
+      "category": "0_Introduction",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups",
+        "libcu++"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleAssert",
+      "name": "simpleAssert",
+      "category": "0_Introduction",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleAssert_nvrtc",
+      "name": "simpleAssert_nvrtc",
+      "category": "0_Introduction",
+      "tier": "SPECIAL",
+      "features": [
+        "JIT_NVRTC"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleAtomicIntrinsics",
+      "name": "simpleAtomicIntrinsics",
+      "category": "0_Introduction",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleAtomicIntrinsics_nvrtc",
+      "name": "simpleAtomicIntrinsics_nvrtc",
+      "category": "0_Introduction",
+      "tier": "SPECIAL",
+      "features": [
+        "JIT_NVRTC"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleAttributes",
+      "name": "simpleAttributes",
+      "category": "0_Introduction",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleCUDA2GL",
+      "name": "simpleCUDA2GL",
+      "category": "0_Introduction",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleCallback",
+      "name": "simpleCallback",
+      "category": "0_Introduction",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleCooperativeGroups",
+      "name": "simpleCooperativeGroups",
+      "category": "0_Introduction",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleCubemapTexture",
+      "name": "simpleCubemapTexture",
+      "category": "0_Introduction",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleDrvRuntime",
+      "name": "simpleDrvRuntime",
+      "category": "0_Introduction",
+      "tier": "SPECIAL",
+      "features": [
+        "driver_module"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleHyperQ",
+      "name": "simpleHyperQ",
+      "category": "0_Introduction",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleIPC",
+      "name": "simpleIPC",
+      "category": "0_Introduction",
+      "tier": "SPECIAL",
+      "features": [
+        "VMM_IPC_mempool",
+        "multiGPU_P2P"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleLayeredTexture",
+      "name": "simpleLayeredTexture",
+      "category": "0_Introduction",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleMPI",
+      "name": "simpleMPI",
+      "category": "0_Introduction",
+      "tier": "BASIC",
+      "features": [
+        "MPI_OpenMP"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleMultiCopy",
+      "name": "simpleMultiCopy",
+      "category": "0_Introduction",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleMultiGPU",
+      "name": "simpleMultiGPU",
+      "category": "0_Introduction",
+      "tier": "SPECIAL",
+      "features": [
+        "multiGPU_P2P"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleOccupancy",
+      "name": "simpleOccupancy",
+      "category": "0_Introduction",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleP2P",
+      "name": "simpleP2P",
+      "category": "0_Introduction",
+      "tier": "SPECIAL",
+      "features": [
+        "multiGPU_P2P"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simplePitchLinearTexture",
+      "name": "simplePitchLinearTexture",
+      "category": "0_Introduction",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simplePrintf",
+      "name": "simplePrintf",
+      "category": "0_Introduction",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleStreams",
+      "name": "simpleStreams",
+      "category": "0_Introduction",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleSurfaceWrite",
+      "name": "simpleSurfaceWrite",
+      "category": "0_Introduction",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleTemplates",
+      "name": "simpleTemplates",
+      "category": "0_Introduction",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleTexture",
+      "name": "simpleTexture",
+      "category": "0_Introduction",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleTexture3D",
+      "name": "simpleTexture3D",
+      "category": "0_Introduction",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics",
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleTextureDrv",
+      "name": "simpleTextureDrv",
+      "category": "0_Introduction",
+      "tier": "SPECIAL",
+      "features": [
+        "driver_module"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleVoteIntrinsics",
+      "name": "simpleVoteIntrinsics",
+      "category": "0_Introduction",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "warp"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/simpleZeroCopy",
+      "name": "simpleZeroCopy",
+      "category": "0_Introduction",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/systemWideAtomics",
+      "name": "systemWideAtomics",
+      "category": "0_Introduction",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "managed_memory"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/template",
+      "name": "template",
+      "category": "0_Introduction",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/vectorAdd",
+      "name": "vectorAdd",
+      "category": "0_Introduction",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/vectorAddDrv",
+      "name": "vectorAddDrv",
+      "category": "0_Introduction",
+      "tier": "SPECIAL",
+      "features": [
+        "driver_module"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/vectorAddMMAP",
+      "name": "vectorAddMMAP",
+      "category": "0_Introduction",
+      "tier": "SPECIAL",
+      "features": [
+        "VMM_IPC_mempool",
+        "driver_module"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "0_Introduction/vectorAdd_nvrtc",
+      "name": "vectorAdd_nvrtc",
+      "category": "0_Introduction",
+      "tier": "SPECIAL",
+      "features": [
+        "JIT_NVRTC"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "1_Utilities/deviceQuery",
+      "name": "deviceQuery",
+      "category": "1_Utilities",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "1_Utilities/deviceQueryDrv",
+      "name": "deviceQueryDrv",
+      "category": "1_Utilities",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "1_Utilities/topologyQuery",
+      "name": "topologyQuery",
+      "category": "1_Utilities",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/EGLStream_CUDA_CrossGPU",
+      "name": "EGLStream_CUDA_CrossGPU",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "DEFERRED_PLATFORM",
+      "features": [
+        "EGL_NvSci",
+        "graphs"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/EGLStream_CUDA_Interop",
+      "name": "EGLStream_CUDA_Interop",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "DEFERRED_PLATFORM",
+      "features": [
+        "EGL_NvSci",
+        "graphs"
+      ],
+      "libraries": [],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/FunctionPointers",
+      "name": "FunctionPointers",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SPECIAL",
+      "features": [
+        "cooperative_groups",
+        "graphics",
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/MC_EstimatePiInlineP",
+      "name": "MC_EstimatePiInlineP",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups",
+        "libraries"
+      ],
+      "libraries": [
+        "cuRAND"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/MC_EstimatePiInlineQ",
+      "name": "MC_EstimatePiInlineQ",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups",
+        "libraries"
+      ],
+      "libraries": [
+        "cuRAND"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/MC_EstimatePiP",
+      "name": "MC_EstimatePiP",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups",
+        "libraries"
+      ],
+      "libraries": [
+        "cuRAND"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/MC_EstimatePiQ",
+      "name": "MC_EstimatePiQ",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups",
+        "libraries"
+      ],
+      "libraries": [
+        "cuRAND"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/MC_SingleAsianOptionP",
+      "name": "MC_SingleAsianOptionP",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups",
+        "libraries"
+      ],
+      "libraries": [
+        "cuRAND"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/boxFilter",
+      "name": "boxFilter",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics",
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/convolutionSeparable",
+      "name": "convolutionSeparable",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/convolutionTexture",
+      "name": "convolutionTexture",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics",
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/dct8x8",
+      "name": "dct8x8",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups",
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/eigenvalues",
+      "name": "eigenvalues",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/histogram",
+      "name": "histogram",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/imageDenoising",
+      "name": "imageDenoising",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SPECIAL",
+      "features": [
+        "cooperative_groups",
+        "graphics",
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/inlinePTX",
+      "name": "inlinePTX",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "HIGH_RISK_REWRITE",
+      "features": [
+        "inline_asm"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/inlinePTX_nvrtc",
+      "name": "inlinePTX_nvrtc",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "HIGH_RISK_REWRITE",
+      "features": [
+        "inline_asm",
+        "JIT_NVRTC"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/interval",
+      "name": "interval",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "HIGH_RISK_REWRITE",
+      "features": [
+        "inline_asm",
+        "MPI_OpenMP"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/particles",
+      "name": "particles",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SPECIAL",
+      "features": [
+        "cooperative_groups",
+        "graphics",
+        "libraries"
+      ],
+      "libraries": [
+        "Thrust"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/radixSortThrust",
+      "name": "radixSortThrust",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "Thrust"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/reduction",
+      "name": "reduction",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "warp",
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/reductionMultiBlockCG",
+      "name": "reductionMultiBlockCG",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/scalarProd",
+      "name": "scalarProd",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/scan",
+      "name": "scan",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/segmentationTreeThrust",
+      "name": "segmentationTreeThrust",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "Thrust"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/shfl_scan",
+      "name": "shfl_scan",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "warp",
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/sortingNetworks",
+      "name": "sortingNetworks",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/streamOrderedAllocation",
+      "name": "streamOrderedAllocation",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SPECIAL",
+      "features": [
+        "VMM_IPC_mempool"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/streamOrderedAllocationIPC",
+      "name": "streamOrderedAllocationIPC",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SPECIAL",
+      "features": [
+        "VMM_IPC_mempool",
+        "multiGPU_P2P"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/streamOrderedAllocationP2P",
+      "name": "streamOrderedAllocationP2P",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SPECIAL",
+      "features": [
+        "VMM_IPC_mempool"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/threadFenceReduction",
+      "name": "threadFenceReduction",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "2_Concepts_and_Techniques/threadMigration",
+      "name": "threadMigration",
+      "category": "2_Concepts_and_Techniques",
+      "tier": "SPECIAL",
+      "features": [
+        "driver_module"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/StreamPriorities",
+      "name": "StreamPriorities",
+      "category": "3_CUDA_Features",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/bf16TensorCoreGemm",
+      "name": "bf16TensorCoreGemm",
+      "category": "3_CUDA_Features",
+      "tier": "HIGH_RISK_REWRITE",
+      "features": [
+        "tensor",
+        "libcu++"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/binaryPartitionCG",
+      "name": "binaryPartitionCG",
+      "category": "3_CUDA_Features",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/bindlessTexture",
+      "name": "bindlessTexture",
+      "category": "3_CUDA_Features",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics",
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/cdpAdvancedQuicksort",
+      "name": "cdpAdvancedQuicksort",
+      "category": "3_CUDA_Features",
+      "tier": "HIGH_RISK_REWRITE",
+      "features": [
+        "inline_asm",
+        "dynamic_parallelism",
+        "cooperative_groups",
+        "libraries"
+      ],
+      "libraries": [
+        "Thrust"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/cdpBezierTessellation",
+      "name": "cdpBezierTessellation",
+      "category": "3_CUDA_Features",
+      "tier": "HIGH_RISK_REWRITE",
+      "features": [
+        "dynamic_parallelism"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/cdpQuadtree",
+      "name": "cdpQuadtree",
+      "category": "3_CUDA_Features",
+      "tier": "HIGH_RISK_REWRITE",
+      "features": [
+        "inline_asm",
+        "dynamic_parallelism",
+        "warp",
+        "cooperative_groups",
+        "libraries"
+      ],
+      "libraries": [
+        "Thrust"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/cdpSimplePrint",
+      "name": "cdpSimplePrint",
+      "category": "3_CUDA_Features",
+      "tier": "HIGH_RISK_REWRITE",
+      "features": [
+        "dynamic_parallelism"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/cdpSimpleQuicksort",
+      "name": "cdpSimpleQuicksort",
+      "category": "3_CUDA_Features",
+      "tier": "HIGH_RISK_REWRITE",
+      "features": [
+        "dynamic_parallelism"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/cudaCompressibleMemory",
+      "name": "cudaCompressibleMemory",
+      "category": "3_CUDA_Features",
+      "tier": "SPECIAL",
+      "features": [
+        "VMM_IPC_mempool"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/cudaTensorCoreGemm",
+      "name": "cudaTensorCoreGemm",
+      "category": "3_CUDA_Features",
+      "tier": "HIGH_RISK_REWRITE",
+      "features": [
+        "tensor"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/dmmaTensorCoreGemm",
+      "name": "dmmaTensorCoreGemm",
+      "category": "3_CUDA_Features",
+      "tier": "HIGH_RISK_REWRITE",
+      "features": [
+        "tensor",
+        "cooperative_groups",
+        "libcu++"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/globalToShmemAsyncCopy",
+      "name": "globalToShmemAsyncCopy",
+      "category": "3_CUDA_Features",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups",
+        "libcu++"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/graphConditionalNodes",
+      "name": "graphConditionalNodes",
+      "category": "3_CUDA_Features",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "graphs"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/graphMemoryFootprint",
+      "name": "graphMemoryFootprint",
+      "category": "3_CUDA_Features",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "graphs"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/graphMemoryNodes",
+      "name": "graphMemoryNodes",
+      "category": "3_CUDA_Features",
+      "tier": "SPECIAL",
+      "features": [
+        "VMM_IPC_mempool",
+        "managed_memory",
+        "graphs"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/immaTensorCoreGemm",
+      "name": "immaTensorCoreGemm",
+      "category": "3_CUDA_Features",
+      "tier": "HIGH_RISK_REWRITE",
+      "features": [
+        "tensor"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/jacobiCudaGraphs",
+      "name": "jacobiCudaGraphs",
+      "category": "3_CUDA_Features",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups",
+        "graphs"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/memMapIPCDrv",
+      "name": "memMapIPCDrv",
+      "category": "3_CUDA_Features",
+      "tier": "SPECIAL",
+      "features": [
+        "VMM_IPC_mempool",
+        "driver_module"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/newdelete",
+      "name": "newdelete",
+      "category": "3_CUDA_Features",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/ptxjit",
+      "name": "ptxjit",
+      "category": "3_CUDA_Features",
+      "tier": "SPECIAL",
+      "features": [
+        "JIT_NVRTC",
+        "driver_module"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/simpleCudaGraphs",
+      "name": "simpleCudaGraphs",
+      "category": "3_CUDA_Features",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups",
+        "graphs"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/tf32TensorCoreGemm",
+      "name": "tf32TensorCoreGemm",
+      "category": "3_CUDA_Features",
+      "tier": "HIGH_RISK_REWRITE",
+      "features": [
+        "tensor",
+        "libcu++"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "3_CUDA_Features/warpAggregatedAtomicsCG",
+      "name": "warpAggregatedAtomicsCG",
+      "category": "3_CUDA_Features",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/FilterBorderControlNPP",
+      "name": "FilterBorderControlNPP",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "NPP"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/MersenneTwisterGP11213",
+      "name": "MersenneTwisterGP11213",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "cuRAND"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/batchCUBLAS",
+      "name": "batchCUBLAS",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "cuBLAS"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/boxFilterNPP",
+      "name": "boxFilterNPP",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "NPP"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/cannyEdgeDetectorNPP",
+      "name": "cannyEdgeDetectorNPP",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "NPP"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/conjugateGradient",
+      "name": "conjugateGradient",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "cuBLAS",
+        "cuSPARSE"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/conjugateGradientCudaGraphs",
+      "name": "conjugateGradientCudaGraphs",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "graphs",
+        "libraries"
+      ],
+      "libraries": [
+        "cuBLAS",
+        "cuSPARSE"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/conjugateGradientMultiBlockCG",
+      "name": "conjugateGradientMultiBlockCG",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups",
+        "managed_memory"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/conjugateGradientMultiDeviceCG",
+      "name": "conjugateGradientMultiDeviceCG",
+      "category": "4_CUDA_Libraries",
+      "tier": "HIGH_RISK_REWRITE",
+      "features": [
+        "inline_asm",
+        "cooperative_groups",
+        "multiGPU_P2P",
+        "managed_memory"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/conjugateGradientPrecond",
+      "name": "conjugateGradientPrecond",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "cuBLAS",
+        "cuSPARSE"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/conjugateGradientUM",
+      "name": "conjugateGradientUM",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "managed_memory",
+        "libraries"
+      ],
+      "libraries": [
+        "cuBLAS",
+        "cuSPARSE"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/cuSolverDn_LinearSolver",
+      "name": "cuSolverDn_LinearSolver",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "cuBLAS",
+        "cuSOLVER"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/cuSolverRf",
+      "name": "cuSolverRf",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "cuSOLVER"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/cuSolverSp_LinearSolver",
+      "name": "cuSolverSp_LinearSolver",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "cuSOLVER",
+        "cuSPARSE"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/cuSolverSp_LowlevelCholesky",
+      "name": "cuSolverSp_LowlevelCholesky",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "cuSOLVER"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/cuSolverSp_LowlevelQR",
+      "name": "cuSolverSp_LowlevelQR",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "cuSOLVER"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/cudaNvSci",
+      "name": "cudaNvSci",
+      "category": "4_CUDA_Libraries",
+      "tier": "DEFERRED_PLATFORM",
+      "features": [
+        "EGL_NvSci",
+        "texture_surface",
+        "multiGPU_P2P"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/freeImageInteropNPP",
+      "name": "freeImageInteropNPP",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "NPP"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/histEqualizationNPP",
+      "name": "histEqualizationNPP",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "NPP"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/jitLto",
+      "name": "jitLto",
+      "category": "4_CUDA_Libraries",
+      "tier": "SPECIAL",
+      "features": [
+        "JIT_NVRTC",
+        "driver_module"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/lineOfSight",
+      "name": "lineOfSight",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "texture_surface",
+        "libraries"
+      ],
+      "libraries": [
+        "Thrust"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/matrixMulCUBLAS",
+      "name": "matrixMulCUBLAS",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "cuBLAS"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/nvJPEG",
+      "name": "nvJPEG",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "nvJPEG"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/nvJPEG_encoder",
+      "name": "nvJPEG_encoder",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "nvJPEG"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/oceanFFT",
+      "name": "oceanFFT",
+      "category": "4_CUDA_Libraries",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics",
+        "libraries"
+      ],
+      "libraries": [
+        "cuFFT"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/randomFog",
+      "name": "randomFog",
+      "category": "4_CUDA_Libraries",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics",
+        "libraries"
+      ],
+      "libraries": [
+        "cuRAND"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/simpleCUBLAS",
+      "name": "simpleCUBLAS",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "cuBLAS"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/simpleCUBLASXT",
+      "name": "simpleCUBLASXT",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "cuBLAS"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/simpleCUBLAS_LU",
+      "name": "simpleCUBLAS_LU",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "cuBLAS"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/simpleCUFFT",
+      "name": "simpleCUFFT",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "cuFFT"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/simpleCUFFT_2d_MGPU",
+      "name": "simpleCUFFT_2d_MGPU",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "cuFFT"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/simpleCUFFT_MGPU",
+      "name": "simpleCUFFT_MGPU",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "cuFFT"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/simpleCUFFT_callback",
+      "name": "simpleCUFFT_callback",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "cuFFT"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "4_CUDA_Libraries/watershedSegmentationNPP",
+      "name": "watershedSegmentationNPP",
+      "category": "4_CUDA_Libraries",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "libraries"
+      ],
+      "libraries": [
+        "NPP"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/BlackScholes",
+      "name": "BlackScholes",
+      "category": "5_Domain_Specific",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/BlackScholes_nvrtc",
+      "name": "BlackScholes_nvrtc",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "JIT_NVRTC"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/FDTD3d",
+      "name": "FDTD3d",
+      "category": "5_Domain_Specific",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/HSOpticalFlow",
+      "name": "HSOpticalFlow",
+      "category": "5_Domain_Specific",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups",
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/Mandelbrot",
+      "name": "Mandelbrot",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/MonteCarloMultiGPU",
+      "name": "MonteCarloMultiGPU",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "cooperative_groups",
+        "multiGPU_P2P",
+        "libraries"
+      ],
+      "libraries": [
+        "cuRAND"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/NV12toBGRandResize",
+      "name": "NV12toBGRandResize",
+      "category": "5_Domain_Specific",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "texture_surface",
+        "managed_memory"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/SobelFilter",
+      "name": "SobelFilter",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "cooperative_groups",
+        "graphics",
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/SobolQRNG",
+      "name": "SobolQRNG",
+      "category": "5_Domain_Specific",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/bicubicTexture",
+      "name": "bicubicTexture",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics",
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/bilateralFilter",
+      "name": "bilateralFilter",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics",
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/binomialOptions",
+      "name": "binomialOptions",
+      "category": "5_Domain_Specific",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/binomialOptions_nvrtc",
+      "name": "binomialOptions_nvrtc",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "JIT_NVRTC"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/convolutionFFT2D",
+      "name": "convolutionFFT2D",
+      "category": "5_Domain_Specific",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "texture_surface",
+        "libraries"
+      ],
+      "libraries": [
+        "cuFFT"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/dwtHaar1D",
+      "name": "dwtHaar1D",
+      "category": "5_Domain_Specific",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/dxtc",
+      "name": "dxtc",
+      "category": "5_Domain_Specific",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/fastWalshTransform",
+      "name": "fastWalshTransform",
+      "category": "5_Domain_Specific",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/fluidsGL",
+      "name": "fluidsGL",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics",
+        "texture_surface",
+        "libraries"
+      ],
+      "libraries": [
+        "cuFFT"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/marchingCubes",
+      "name": "marchingCubes",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics",
+        "texture_surface",
+        "libraries"
+      ],
+      "libraries": [
+        "Thrust"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/nbody",
+      "name": "nbody",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "cooperative_groups",
+        "graphics",
+        "multiGPU_P2P",
+        "MPI_OpenMP"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/p2pBandwidthLatencyTest",
+      "name": "p2pBandwidthLatencyTest",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "multiGPU_P2P"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/postProcessGL",
+      "name": "postProcessGL",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "cooperative_groups",
+        "graphics",
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/quasirandomGenerator",
+      "name": "quasirandomGenerator",
+      "category": "5_Domain_Specific",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/quasirandomGenerator_nvrtc",
+      "name": "quasirandomGenerator_nvrtc",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "JIT_NVRTC"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/recursiveGaussian",
+      "name": "recursiveGaussian",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "cooperative_groups",
+        "graphics"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/simpleD3D11",
+      "name": "simpleD3D11",
+      "category": "5_Domain_Specific",
+      "tier": "DEFERRED_PLATFORM",
+      "features": [
+        "Windows_D3D"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/simpleD3D11Texture",
+      "name": "simpleD3D11Texture",
+      "category": "5_Domain_Specific",
+      "tier": "DEFERRED_PLATFORM",
+      "features": [
+        "Windows_D3D",
+        "graphics"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/simpleD3D12",
+      "name": "simpleD3D12",
+      "category": "5_Domain_Specific",
+      "tier": "DEFERRED_PLATFORM",
+      "features": [
+        "Windows_D3D",
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/simpleGL",
+      "name": "simpleGL",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/simpleVulkan",
+      "name": "simpleVulkan",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/simpleVulkanMMAP",
+      "name": "simpleVulkanMMAP",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics",
+        "VMM_IPC_mempool",
+        "libraries"
+      ],
+      "libraries": [
+        "cuRAND"
+      ],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/smokeParticles",
+      "name": "smokeParticles",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics",
+        "texture_surface",
+        "libraries"
+      ],
+      "libraries": [
+        "Thrust"
+      ],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/stereoDisparity",
+      "name": "stereoDisparity",
+      "category": "5_Domain_Specific",
+      "tier": "HIGH_RISK_REWRITE",
+      "features": [
+        "inline_asm",
+        "cooperative_groups",
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/volumeFiltering",
+      "name": "volumeFiltering",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics",
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/volumeRender",
+      "name": "volumeRender",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics",
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "5_Domain_Specific/vulkanImageCUDA",
+      "name": "vulkanImageCUDA",
+      "category": "5_Domain_Specific",
+      "tier": "SPECIAL",
+      "features": [
+        "graphics",
+        "texture_surface"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "6_Performance/LargeKernelParameter",
+      "name": "LargeKernelParameter",
+      "category": "6_Performance",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "6_Performance/UnifiedMemoryPerf",
+      "name": "UnifiedMemoryPerf",
+      "category": "6_Performance",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "managed_memory"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "6_Performance/alignedTypes",
+      "name": "alignedTypes",
+      "category": "6_Performance",
+      "tier": "BASIC",
+      "features": [],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "6_Performance/cudaGraphsPerfScaling",
+      "name": "cudaGraphsPerfScaling",
+      "category": "6_Performance",
+      "tier": "HIGH_RISK_REWRITE",
+      "features": [
+        "inline_asm",
+        "graphs"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "6_Performance/transpose",
+      "name": "transpose",
+      "category": "6_Performance",
+      "tier": "SEMANTIC_OR_LIBRARY",
+      "features": [
+        "cooperative_groups"
+      ],
+      "libraries": [],
+      "host_only": false,
+      "status": "planned"
+    },
+    {
+      "path": "7_libNVVM/cuda-c-linking",
+      "name": "cuda-c-linking",
+      "category": "7_libNVVM",
+      "tier": "DEFERRED_PLATFORM",
+      "features": [
+        "libNVVM",
+        "JIT_NVRTC",
+        "driver_module"
+      ],
+      "libraries": [],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "7_libNVVM/cuda-shared-memory",
+      "name": "cuda-shared-memory",
+      "category": "7_libNVVM",
+      "tier": "DEFERRED_PLATFORM",
+      "features": [
+        "libNVVM"
+      ],
+      "libraries": [],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "7_libNVVM/device-side-launch",
+      "name": "device-side-launch",
+      "category": "7_libNVVM",
+      "tier": "DEFERRED_PLATFORM",
+      "features": [
+        "libNVVM",
+        "JIT_NVRTC",
+        "driver_module"
+      ],
+      "libraries": [],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "7_libNVVM/ptxgen",
+      "name": "ptxgen",
+      "category": "7_libNVVM",
+      "tier": "DEFERRED_PLATFORM",
+      "features": [
+        "libNVVM",
+        "JIT_NVRTC"
+      ],
+      "libraries": [],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "7_libNVVM/simple",
+      "name": "simple",
+      "category": "7_libNVVM",
+      "tier": "DEFERRED_PLATFORM",
+      "features": [
+        "libNVVM",
+        "JIT_NVRTC",
+        "driver_module"
+      ],
+      "libraries": [],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "7_libNVVM/syscalls",
+      "name": "syscalls",
+      "category": "7_libNVVM",
+      "tier": "DEFERRED_PLATFORM",
+      "features": [
+        "libNVVM"
+      ],
+      "libraries": [],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "7_libNVVM/uvmlite",
+      "name": "uvmlite",
+      "category": "7_libNVVM",
+      "tier": "DEFERRED_PLATFORM",
+      "features": [
+        "libNVVM",
+        "JIT_NVRTC",
+        "driver_module"
+      ],
+      "libraries": [],
+      "host_only": true,
+      "status": "planned"
+    },
+    {
+      "path": "8_Platform_Specific/Tegra",
+      "name": "Tegra",
+      "category": "8_Platform_Specific",
+      "tier": "DEFERRED_PLATFORM",
+      "features": [
+        "Tegra",
+        "EGL_NvSci",
+        "graphics",
+        "texture_surface",
+        "graphs",
+        "MPI_OpenMP",
+        "libraries"
+      ],
+      "libraries": [
+        "cuFFT"
+      ],
+      "host_only": false,
+      "status": "planned"
+    }
+  ]
+}

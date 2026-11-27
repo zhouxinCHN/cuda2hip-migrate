@@ -1,0 +1,208 @@
+"""Resolve a CUDA installation root that ``hipify-clang`` can parse against.
+
+``hipify-clang`` refuses to translate without a CUDA installation. It expects
+NVIDIA's layout::
+
+    <root>/include/cuda_runtime.h
+    <root>/nvvm/libdevice/libdevice.10.bc
+    <root>/bin/
+
+The CUDA toolkit packaged by Debian/Ubuntu (``nvidia-cuda-toolkit``) installs
+headers into ``/usr/include``, libdevice into
+``/usr/lib/nvidia-cuda-toolkit/libdevice`` and binaries into
+``/usr/lib/nvidia-cuda-toolkit/bin``, which does not match. This module detects
+that layout and materialises a symlinked root inside the artifact directory, so
+the shim is reproducible and never touches the system.
+
+Measured behaviour on ROCm 7.2.4 / hipify-clang 22.0.0git:
+
+- a root without ``bin/`` makes hipify-clang log
+  ``CUDA SDK version detected: 0``, fail every CUDA identifier, exit 1 and
+  produce no output;
+- ``--cuda-path`` is always passed as an absolute path here. That is a project
+  convention for reproducibility: this hipify-clang version also accepted a
+  relative path in a minimal run, so it is not a tool requirement.
+
+The detected CUDA version is recorded with every piece of evidence: a v12.9
+sample parsed against CUDA 12.0 headers is a real limitation, not a detail.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import shutil
+from dataclasses import dataclass
+from pathlib import Path
+
+LIBDEVICE = Path("nvvm/libdevice/libdevice.10.bc")
+RUNTIME_HEADER = Path("include/cuda_runtime.h")
+TOOLCHAIN_BIN = Path("bin")
+
+#: Debian/Ubuntu toolkit locations.
+SYSTEM_INCLUDE = Path("/usr/include")
+SYSTEM_LIBDEVICE = Path("/usr/lib/nvidia-cuda-toolkit/libdevice")
+
+
+class CudaRootError(RuntimeError):
+    """No usable CUDA installation was found."""
+
+
+@dataclass(frozen=True)
+class CudaRoot:
+    path: Path
+    version: int | None
+    version_string: str
+    synthetic: bool
+    detection: str
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "path": str(self.path),
+            "cuda_version": self.version,
+            "cuda_version_string": self.version_string,
+            "synthetic": self.synthetic,
+            "detection": self.detection,
+        }
+
+
+def _cuda_version(include_dir: Path) -> int | None:
+    header = include_dir / "cuda.h"
+    if not header.is_file():
+        return None
+    match = re.search(
+        r"#define\s+CUDA_VERSION\s+(\d+)", header.read_text(encoding="utf-8", errors="replace")
+    )
+    return int(match.group(1)) if match else None
+
+
+def _format_version(version: int | None) -> str:
+    """Format CUDA_VERSION (major * 1000 + minor * 10) as ``major.minor``."""
+    if version is None:
+        return "unknown"
+    major, remainder = divmod(version, 1000)
+    return f"{major}.{remainder // 10}"
+
+
+def _is_complete(root: Path) -> bool:
+    """A usable root has headers, libdevice and the toolchain binaries.
+
+    ``bin/`` is part of the contract: hipify-clang reports
+    ``CUDA SDK version detected: 0`` and fails to translate when it is missing.
+    """
+    return (
+        (root / RUNTIME_HEADER).is_file()
+        and (root / LIBDEVICE).is_file()
+        and (root / TOOLCHAIN_BIN).is_dir()
+    )
+
+
+def _system_bin_dir() -> Path | None:
+    """Return the directory holding the CUDA toolchain binaries.
+
+    hipify-clang cannot translate against a ``--cuda-path`` without ``bin/``. The
+    Debian toolkit splits the binaries from the headers, so both locations have
+    to be considered.
+    """
+    toolkit_bin = SYSTEM_LIBDEVICE.parent / "bin"
+    if toolkit_bin.is_dir():
+        return toolkit_bin
+    nvcc = shutil.which("nvcc")
+    return Path(nvcc).parent if nvcc else None
+
+
+def load_cuda_root(path: Path) -> CudaRoot:
+    """Validate an explicitly supplied CUDA root.
+
+    Unlike :func:`resolve_cuda_root`, this never creates a synthetic root: a
+    generic migration must not silently substitute a different CUDA baseline
+    for the one the caller supplied.
+    """
+    candidate = Path(path).expanduser().resolve()
+    if not _is_complete(candidate):
+        raise CudaRootError(
+            f"{candidate} is not a usable CUDA root; expected "
+            f"{RUNTIME_HEADER}, {LIBDEVICE} and {TOOLCHAIN_BIN}/"
+        )
+    version = _cuda_version(candidate / "include")
+    return CudaRoot(
+        path=candidate,
+        version=version,
+        version_string=_format_version(version),
+        synthetic=False,
+        detection=f"explicit CUDA root at {candidate}",
+    )
+
+
+def _candidate_roots() -> list[tuple[str, Path]]:
+    candidates: list[tuple[str, Path]] = []
+    for name in ("CUDA_PATH", "CUDA_HOME"):
+        value = os.environ.get(name)
+        if value:
+            candidates.append((f"${name}", Path(value)))
+    candidates.append(("/usr/local/cuda", Path("/usr/local/cuda")))
+    for entry in sorted(Path("/usr/local").glob("cuda-*")):
+        candidates.append((str(entry), entry))
+    return candidates
+
+
+def resolve_cuda_root(work_dir: Path) -> CudaRoot:
+    """Return a CUDA root suitable for ``hipify-clang --cuda-path``.
+
+    ``work_dir`` receives the synthetic root when the installed toolkit does not
+    use NVIDIA's layout. The synthetic root is rebuilt on every call; it holds
+    only symlinks and is never modified in place.
+    """
+    # Project convention: every path handed to hipify-clang is absolute, so a
+    # run is reproducible regardless of the caller's working directory.
+    work_dir = Path(work_dir).resolve()
+
+    for label, candidate in _candidate_roots():
+        if _is_complete(candidate):
+            version = _cuda_version(candidate / "include")
+            return CudaRoot(
+                path=candidate,
+                version=version,
+                version_string=_format_version(version),
+                synthetic=False,
+                detection=f"standard layout at {label}",
+            )
+
+    if (SYSTEM_INCLUDE / "cuda_runtime.h").is_file() and (
+        SYSTEM_LIBDEVICE / "libdevice.10.bc"
+    ).is_file():
+        version = _cuda_version(SYSTEM_INCLUDE)
+        bin_dir = _system_bin_dir()
+        if bin_dir is None:
+            # Fail before creating anything: a half-built root is worse than none.
+            raise CudaRootError(
+                "found CUDA headers and libdevice but no toolchain bin/ directory; "
+                "hipify-clang cannot translate without it. Install the toolkit "
+                "binaries or set CUDA_PATH to a complete installation"
+            )
+        synthetic = work_dir / "cuda-root"
+        links = [
+            (synthetic / "include", SYSTEM_INCLUDE),
+            (synthetic / LIBDEVICE, SYSTEM_LIBDEVICE / "libdevice.10.bc"),
+            (synthetic / TOOLCHAIN_BIN, bin_dir),
+        ]
+        for link, target in links:
+            link.parent.mkdir(parents=True, exist_ok=True)
+            if link.is_symlink() or link.exists():
+                link.unlink()
+            link.symlink_to(target)
+        return CudaRoot(
+            path=synthetic,
+            version=version,
+            version_string=_format_version(version),
+            synthetic=True,
+            detection=(
+                "Debian/Ubuntu layout: headers "
+                f"{SYSTEM_INCLUDE}, libdevice {SYSTEM_LIBDEVICE} (symlinked root)"
+            ),
+        )
+
+    raise CudaRootError(
+        "no CUDA installation usable by hipify-clang; set CUDA_PATH to a toolkit "
+        f"containing {RUNTIME_HEADER}, {LIBDEVICE} and {TOOLCHAIN_BIN}/"
+    )

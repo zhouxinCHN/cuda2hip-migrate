@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "name": "vectorAdd",
+  "path": "0_Introduction/vectorAdd",
+  "sources": ["vectorAdd.cu"],
+  "libraries": [],
+  "run": {"args": [], "timeout_seconds": 120},
+  "c3": {"mode": "marker", "marker": "Test PASSED"},
+  "notes": "Simplest P0 sample: includes helper_cuda.h but calls no helper function."
+}

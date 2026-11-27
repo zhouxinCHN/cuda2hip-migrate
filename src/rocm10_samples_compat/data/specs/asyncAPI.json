@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "name": "asyncAPI",
+  "path": "0_Introduction/asyncAPI",
+  "sources": ["asyncAPI.cu"],
+  "libraries": ["rocprofiler-sdk-roctx"],
+  "run": {"args": [], "timeout_seconds": 300},
+  "c3": {"mode": "exit-status"},
+  "notes": "Self-verifies and exits EXIT_FAILURE on mismatch; no printed success marker. Brackets its work with cudaProfilerStart/Stop, which HIP-PROFILER-ROCTX-001 routes to rocTX; that is why it links librocprofiler-sdk-roctx."
+}

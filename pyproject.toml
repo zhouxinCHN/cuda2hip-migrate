@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rocm10-cuda-samples-compat"
+version = "0.2.0"
+description = "CUDA v12.9 to HIP migration and compatibility validation on ROCm 10.0.0"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+keywords = ["cuda", "hip", "rocm", "cuda-samples", "migration"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development :: Build Tools",
+]
+
+[project.optional-dependencies]
+dev = ["build>=1.2", "ruff>=0.6"]
+
+[project.scripts]
+rocm10-samples-compat = "rocm10_samples_compat.cli:main"
+rocm-cuda-migrate = "rocm10_samples_compat.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+rocm10_samples_compat = [
+    "data/*.json",
+    "data/specs/*.json",
+    "overlay/rocm10_compat/*.h",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
