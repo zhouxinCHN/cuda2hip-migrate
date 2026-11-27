@@ -26,12 +26,14 @@ import os
 import re
 import shlex
 import shutil
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import __version__, environment
 from .cuda_root import CudaRoot, resolve_cuda_root
 from .hipify import HipifyError, hipify_source
+from .process import run_logged
 from .redirects import (
     DEFAULT_REDIRECTS,
     Redirect,
@@ -46,6 +48,11 @@ from .rules import (
     rule_hits,
 )
 from .rules.cpp import find_directives
+from .workspace import (
+    WorkspaceError,
+    temp_environment,
+    temp_root as workspace_temp_root,
+)
 
 REPORT_SCHEMA = 1
 RULES_PROFILE = "rocm10-cuda12.9"
@@ -146,6 +153,13 @@ _INCLUDE_RE = re.compile(
 )
 _IDENTIFIER_START_RE = re.compile(r"[A-Za-z_]")
 
+#: CMake/NVCC may put include and define flags in an options file.  The limits
+#: keep a malformed database from turning conversion into an unbounded file
+#: walk, while leaving normal compiler response files far below the threshold.
+_RESPONSE_FILE_MAX_BYTES = 1_000_000
+_RESPONSE_FILE_MAX_DEPTH = 8
+_RESPONSE_FILE_MAX_ARGUMENTS = 100_000
+
 
 class ProjectError(RuntimeError):
     """An input or configuration error prevented migration from starting."""
@@ -214,6 +228,8 @@ class MigrationRequest:
     excludes: tuple[str, ...] = ()
     source_patterns: tuple[str, ...] = ()
     force: bool = False
+    auto_configure: bool = True
+    configure_args: tuple[str, ...] = ()
     rules_profile: str = RULES_PROFILE
 
 
@@ -431,6 +447,93 @@ def _arg_value(arguments: list[str], index: int, flag: str) -> tuple[str, int]:
     return arguments[index + 1], index + 2
 
 
+def _response_file_path(value: str, *, directory: Path) -> Path:
+    path = Path(value).expanduser()
+    if not path.is_absolute():
+        path = directory / path
+    return path.resolve()
+
+
+def _read_response_file(path: Path, *, depth: int) -> list[str]:
+    if depth > _RESPONSE_FILE_MAX_DEPTH:
+        raise ProjectError(
+            f"response file nesting exceeds {_RESPONSE_FILE_MAX_DEPTH}: {path}"
+        )
+    if not path.is_file():
+        raise ProjectError(f"response file does not exist: {path}")
+    try:
+        size = path.stat().st_size
+    except OSError as error:
+        raise ProjectError(f"cannot inspect response file {path}: {error}") from error
+    if size > _RESPONSE_FILE_MAX_BYTES:
+        raise ProjectError(
+            f"response file is larger than {_RESPONSE_FILE_MAX_BYTES} bytes: {path}"
+        )
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as error:
+        raise ProjectError(f"cannot read response file {path}: {error}") from error
+    try:
+        return shlex.split(text)
+    except ValueError as error:
+        raise ProjectError(f"cannot parse response file {path}: {error}") from error
+
+
+def _expand_response_files(
+    arguments: list[str],
+    *,
+    directory: Path,
+    depth: int = 0,
+    active: frozenset[Path] = frozenset(),
+) -> list[str]:
+    """Expand NVCC/Clang ``@file`` and ``--options-file`` arguments.
+
+    CMake commonly emits CUDA include directories in a response file rather
+    than on the visible command line.  Without expansion the compile database
+    would appear valid but lose every include path hidden in that file.
+    """
+    expanded: list[str] = []
+    index = 0
+    while index < len(arguments):
+        argument = arguments[index]
+        response_value: str | None = None
+        consumed = 1
+        if argument == "--options-file":
+            if index + 1 >= len(arguments):
+                raise ProjectError("compile argument '--options-file' has no value")
+            response_value = arguments[index + 1]
+            consumed = 2
+        elif argument.startswith("--options-file="):
+            response_value = argument.split("=", 1)[1]
+        elif argument.startswith("@") and len(argument) > 1:
+            response_value = argument[1:]
+
+        if response_value is None:
+            expanded.append(argument)
+            index += consumed
+            continue
+
+        path = _response_file_path(response_value, directory=directory)
+        if path in active:
+            raise ProjectError(f"response file cycle detected: {path}")
+        tokens = _read_response_file(path, depth=depth)
+        expanded.extend(
+            _expand_response_files(
+                tokens,
+                directory=directory,
+                depth=depth + 1,
+                active=active | {path},
+            )
+        )
+        if len(expanded) > _RESPONSE_FILE_MAX_ARGUMENTS:
+            raise ProjectError(
+                "expanded compile arguments exceed "
+                f"{_RESPONSE_FILE_MAX_ARGUMENTS} entries"
+            )
+        index += consumed
+    return expanded
+
+
 def _parse_compile_arguments(
     arguments: list[str],
     *,
@@ -606,6 +709,106 @@ def _normalise_units(
     return tuple(merged)
 
 
+def _cuda_compiler(cuda_root: CudaRoot) -> str | None:
+    candidate = cuda_root.path / "bin" / "nvcc"
+    if candidate.is_file():
+        return str(candidate.resolve())
+    return shutil.which("nvcc")
+
+
+def _cuda_toolkit_root(cuda_root: CudaRoot, compiler: str | None) -> Path | None:
+    """Return a CMake-usable toolkit root.
+
+    A synthetic root created for hipify-clang contains only headers, libdevice
+    and ``bin/``; it deliberately does not contain CMake's CUDA libraries.  For
+    a synthetic root, derive the real toolkit root from the resolved compiler
+    instead of handing CMake the incomplete shim.
+    """
+    if not cuda_root.synthetic:
+        return cuda_root.path
+    if compiler is None:
+        return None
+    candidate = Path(compiler).resolve().parent.parent
+    if (candidate / "include" / "cuda_runtime.h").is_file():
+        return candidate
+    return None
+
+
+def _configure_cmake(
+    input_root: Path,
+    *,
+    cuda_root: CudaRoot,
+    project_temp: Path,
+    configure_args: tuple[str, ...],
+    reports: Path,
+) -> tuple[Path, dict[str, object]]:
+    """Configure a CMake project inside the output tree and return its database.
+
+    This invokes only ``cmake`` configure, never ``cmake --build``.  The
+    configure step is how a project's own targets expose their per-translation-
+    unit include paths and defines to the converter.
+    """
+    build_dir = project_temp / "cmake-build"
+    tmp_dir = project_temp / "tmpdir"
+    try:
+        build_dir.mkdir(parents=True, exist_ok=True)
+        temp_environment(tmp_dir)
+    except (OSError, WorkspaceError) as error:
+        raise ProjectError(f"cannot create CMake temporary directory: {error}") from error
+
+    command = [
+        "cmake",
+        "-S",
+        str(input_root),
+        "-B",
+        str(build_dir),
+        "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+    ]
+    compiler = _cuda_compiler(cuda_root)
+    if compiler is not None:
+        command.append(f"-DCMAKE_CUDA_COMPILER={compiler}")
+    toolkit_root = _cuda_toolkit_root(cuda_root, compiler)
+    if toolkit_root is not None:
+        command.append(f"-DCUDAToolkit_ROOT={toolkit_root}")
+    command.extend(configure_args)
+
+    try:
+        result = run_logged(
+            command,
+            env=temp_environment(tmp_dir),
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise ProjectError(f"cannot run CMake configure: {error}") from error
+
+    reports.mkdir(parents=True, exist_ok=True)
+    log_path = reports / "configure.log"
+    log_path.write_text(
+        "$ " + " ".join(command) + "\n\n" + result.stdout + result.stderr,
+        encoding="utf-8",
+    )
+    if result.returncode != 0:
+        raise ProjectError(
+            f"CMake configure failed with exit {result.returncode}; see {log_path}\n"
+            f"{result.tail}"
+        )
+
+    database = build_dir / "compile_commands.json"
+    if not database.is_file():
+        raise ProjectError(
+            "CMake configure completed but did not produce "
+            f"{database}; the generator may not support "
+            "CMAKE_EXPORT_COMPILE_COMMANDS"
+        )
+    return database, {
+        "mode": "configured",
+        "command": command,
+        "returncode": result.returncode,
+        "build_dir": str(build_dir),
+        "log": str(log_path),
+        "compile_commands": str(database),
+    }
+
+
 def _units_from_compile_commands(
     database: Path,
     *,
@@ -645,7 +848,10 @@ def _units_from_compile_commands(
         if source_path.suffix.lower() not in TRANSLATABLE_SUFFIXES:
             continue
 
-        arguments = _entry_arguments(raw)
+        arguments = _expand_response_files(
+            _entry_arguments(raw),
+            directory=directory,
+        )
         compiler = Path(arguments[0]).name if arguments else None
         compiler_key = (compiler or "").lower()
         translate = (
@@ -935,6 +1141,7 @@ def _hipify_headers(
     preexisting_hips: set[Path],
     translated_headers: dict[Path, bytes],
     state: _RunState,
+    temp_dir: Path,
 ) -> None:
     for source in sorted(preprocessed.rglob("*")):
         if not source.is_file() or source.suffix.lower() not in HEADER_SUFFIXES:
@@ -979,6 +1186,7 @@ def _hipify_headers(
                     include_dirs=(),
                     local_headers=True,
                     extra_args=tuple(extra_args),
+                    temp_dir=temp_dir,
                 )
             except HipifyError as error:
                 failures += 1
@@ -1063,6 +1271,7 @@ def _hipify_units(
     request_defines: tuple[str, ...],
     redirects: tuple[Redirect, ...],
     state: _RunState,
+    temp_dir: Path,
 ) -> None:
     shutil.copytree(preprocessed, hipified)
     preexisting_hips = {
@@ -1107,6 +1316,7 @@ def _hipify_units(
                 include_dirs=(),
                 local_headers=True,
                 extra_args=tuple(extra_args),
+                temp_dir=temp_dir,
             )
         except HipifyError as error:
             state.failed_units += 1
@@ -1172,6 +1382,7 @@ def _hipify_units(
         preexisting_hips=preexisting_hips,
         translated_headers=translated_headers,
         state=state,
+        temp_dir=temp_dir,
     )
 
 
@@ -1430,6 +1641,13 @@ def convert_project(request: MigrationRequest) -> ConversionOutcome:
 
     input_root, output_root = _prepare_output(request)
     state = _RunState()
+    reports = output_root / "reports"
+    try:
+        reports.mkdir(parents=True, exist_ok=True)
+        project_temp = workspace_temp_root(output_root, input_root.name)
+    except (OSError, WorkspaceError) as error:
+        raise ProjectError(f"cannot create output workspace: {error}") from error
+
     work_root = output_root / ".migration"
     work_root.mkdir()
     source_stage = work_root / "source"
@@ -1438,11 +1656,40 @@ def convert_project(request: MigrationRequest) -> ConversionOutcome:
     adapted_stage = output_root / "src"
 
     cuda_root = request.cuda_root or resolve_cuda_root(work_root)
+    cmake_project = (input_root / "CMakeLists.txt").is_file()
     compile_commands = (
         request.compile_commands.expanduser().resolve()
         if request.compile_commands is not None
         else None
     )
+    compile_commands_source = "explicit" if compile_commands is not None else "tree"
+    configure_record: dict[str, object] | None = None
+
+    if compile_commands is None and request.auto_configure and cmake_project:
+        compile_commands, configure_record = _configure_cmake(
+            input_root,
+            cuda_root=cuda_root,
+            project_temp=project_temp,
+            configure_args=request.configure_args,
+            reports=reports,
+        )
+        compile_commands_source = "configured"
+    elif compile_commands is None and not request.auto_configure and cmake_project:
+        configure_record = {
+            "mode": "disabled",
+            "reason": "automatic CMake configuration is disabled",
+        }
+        state.add(
+            ProjectIssue(
+                kind="cmake-configuration-disabled",
+                message=(
+                    "CMakeLists.txt was found but automatic configuration is "
+                    "disabled; tree mode may miss per-target options"
+                ),
+                severity="warning",
+                blocking=False,
+            )
+        )
 
     if compile_commands is not None:
         units = _units_from_compile_commands(
@@ -1539,6 +1786,7 @@ def convert_project(request: MigrationRequest) -> ConversionOutcome:
             request_defines=request.defines,
             redirects=redirects,
             state=state,
+            temp_dir=project_temp / "hipify",
         )
     except HipifyError as error:
         state.add(
@@ -1576,10 +1824,13 @@ def convert_project(request: MigrationRequest) -> ConversionOutcome:
             "root": str(output_root),
             "source": str(adapted_stage),
             "reports": str(output_root / "reports"),
+            "temp": str(project_temp),
         },
         "environment": environment.evidence_environment(),
         "cuda_root": cuda_root.as_dict(),
         "compile_commands": str(compile_commands) if compile_commands else None,
+        "compile_commands_source": compile_commands_source,
+        "configure": configure_record,
         "units": state.unit_records,
         "unit_count": len(units),
         "translated_units": state.translated_units,

@@ -72,6 +72,22 @@ def build_parser() -> argparse.ArgumentParser:
     convert_parser.add_argument("--cuda-root", default=None, type=Path)
     convert_parser.add_argument("--compile-commands", default=None, type=Path)
     convert_parser.add_argument(
+        "--no-configure",
+        dest="auto_configure",
+        action="store_false",
+        default=True,
+        help=(
+            "do not configure a CMake project automatically; use tree mode "
+            "unless --compile-commands is supplied"
+        ),
+    )
+    convert_parser.add_argument(
+        "--configure-arg",
+        action="append",
+        default=[],
+        help="extra CMake configure argument (repeatable)",
+    )
+    convert_parser.add_argument(
         "--include",
         action="append",
         default=[],
@@ -163,6 +179,8 @@ def main(argv: list[str] | None = None) -> int:
                     excludes=tuple(args.exclude),
                     source_patterns=tuple(args.source),
                     force=args.force,
+                    auto_configure=args.auto_configure,
+                    configure_args=tuple(args.configure_arg),
                     rules_profile=args.rules_profile,
                 )
             )
@@ -176,6 +194,7 @@ def main(argv: list[str] | None = None) -> int:
             report = outcome.report
             print(f"status: {outcome.status}")
             print(f"source: {report['output']['source']}")  # type: ignore[index]
+            print(f"compile commands: {report['compile_commands_source']}")
             print(f"report: {outcome.report_path}")
             print(
                 f"units: {report['translated_units']}/{report['unit_count']} translated"

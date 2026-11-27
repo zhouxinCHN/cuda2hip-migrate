@@ -38,7 +38,7 @@ Implemented:
 - priority batches;
 - environment check;
 - manifest CLI;
-- unit tests (53, no GPU required);
+- unit tests (no GPU required);
 - development plan;
 - machine resource plan;
 - first skill document;
@@ -48,12 +48,17 @@ Implemented:
 - per-sample specs for the P0 batch;
 - P0 baseline evidence on ROCm 7.2.4 / `gfx1100` (interim, superseded);
 - project-level `convert` developer preview for arbitrary source trees:
-  recursive layout, optional per-unit compile database, report/change log,
-  requirements aggregation and generated CMake dependency target; no build or
-  run step (`docs/generic-conversion.md`);
-- Docker-target verification: 99 tests, including real HIPIFY + hipcc
-  integration tests for `vectorAdd` and an include-directory CUDA header, plus
-  the P0 batch regression.
+  recursive layout, optional explicit compile database, automatic CMake
+  configuration when a root `CMakeLists.txt` exists, response-file expansion,
+  report/change log, requirements aggregation and generated CMake dependency
+  target; no build or run step (`docs/generic-conversion.md`);
+- output-root temporary policy: `convert` uses
+  `<output>/.tmp/<project>/{cmake-build,hipify,tmpdir}`; sample acceptance uses
+  `<artifacts>/.tmp/<sample>/{hipify,hipcc,run}`. HIPIFY gets both `--temp-dir`
+  and `TMPDIR`, and child CMake/hipcc/run processes inherit `TMPDIR/TMP/TEMP`;
+- Docker-target verification: 116 tests, including real HIPIFY + hipcc
+  integration tests for `vectorAdd`, an include-directory CUDA header and an
+  auto-configured CMake CUDA project, plus the P0 batch regression.
 
 Not implemented:
 
@@ -152,6 +157,12 @@ claim about hipify-clang without a minimal reproduction.
     **Decided 2026-11-25: keep blocked** until the P0 batch is re-run on ROCm
     10.0.0. rocTX mapping and no-op stubs are both rejected for now; reopening
     requires a rule id plus a test, not an ad-hoc edit.
+12. `hipify-clang --temp-dir` alone does not contain Clang's preprocessing
+    temporary file; the child also needs `TMPDIR`. The converter sets both.
+13. CMake's CUDA compile commands commonly hide `-I` in
+    `--options-file CMakeFiles/<target>.dir/includes_CUDA.rsp`; automatic
+    configuration is unsafe unless response files are expanded before option
+    extraction.
 
 ## 6. Baseline batches
 

@@ -13,6 +13,7 @@ from pathlib import Path
 
 from .cuda_root import CudaRoot
 from .process import ToolResult, require_tool, run_logged
+from .workspace import temp_environment
 
 #: Failure markers hipify-clang prints in place of a non-zero exit status.
 #:
@@ -45,17 +46,21 @@ def hipify_source(
     include_dirs: tuple[Path, ...],
     local_headers: bool = False,
     extra_args: tuple[str, ...] = (),
+    temp_dir: Path | None = None,
 ) -> HipifyResult:
     """Translate one CUDA source file into its HIP equivalent.
 
     ``source`` must already be the redirected pre-HIPIFY copy; the pinned
-    checkout is never passed to this function.
+    checkout is never passed to this function.  When ``temp_dir`` is supplied,
+    both hipify-clang's ``--temp-dir`` and the child's ``TMPDIR`` (plus the
+    portable ``TMP``/``TEMP`` spellings) point inside the caller's output root.
     """
     executable = require_tool("hipify-clang")
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.exists():
         output.unlink()
 
+    environment = None
     command = [
         executable,
         str(source),
@@ -64,13 +69,17 @@ def hipify_source(
         "-o",
         str(output),
     ]
+    if temp_dir is not None:
+        resolved_temp = Path(temp_dir).expanduser().resolve()
+        command.append(f"--temp-dir={resolved_temp}")
+        environment = temp_environment(resolved_temp)
     if local_headers:
         command.append("--local-headers")
     for directory in include_dirs:
         command.extend(["-I", str(directory)])
     command.extend(extra_args)
 
-    result = run_logged(command)
+    result = run_logged(command, env=environment)
     text = result.output
 
     if result.returncode != 0:

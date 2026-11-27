@@ -11,6 +11,7 @@ dist/
 artifacts/
 artifacts-rocm10/
 third-party/
+.tmp/
 
 # Local-only analysis, not published
 docs/api-and-sample-changes.md

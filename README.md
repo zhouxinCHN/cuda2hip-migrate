@@ -20,11 +20,12 @@ working P0 migration pipeline: pre-HIPIFY include routing, hipify-clang runner,
 deterministic post-HIPIFY rules, a Common helper overlay and C1/C2/C3 evidence
 capture.
 
-It also has a project-level `convert` command for arbitrary CUDA source trees,
-with optional per-translation-unit options from `compile_commands.json`. The
-converter produces HIP source, a migration report, change log and a generated
-CMake dependency target; it does not build, run or claim sample acceptance.
-See [docs/generic-conversion.md](docs/generic-conversion.md).
+It also has a project-level `convert` command for arbitrary CUDA source trees.
+For a CMake project it can generate per-translation-unit options by configuring
+into the user-selected output directory; an existing `compile_commands.json` is
+an optional override. The converter produces HIP source, a migration report,
+change log and a generated CMake dependency target; it does not build, run or
+claim sample acceptance. See [docs/generic-conversion.md](docs/generic-conversion.md).
 
 ## Quick start
 
@@ -55,9 +56,14 @@ present. `make run-p0` writes `artifacts/<sample>/evidence.json`; override
 PYTHONPATH=src python3 -m rocm10_samples_compat convert \
   --input ./cuda-app \
   --output ../cuda-app-hip \
-  --cuda-root /usr/local/cuda-12.9 \
-  --compile-commands ./build/compile_commands.json
+  --cuda-root /usr/local/cuda-12.9
 ```
+
+For a CMake project, the converter configures into
+`<output>/.tmp/<project>/cmake-build` and reads the generated
+`compile_commands.json`. Pass `--compile-commands FILE` to use an existing
+database instead, or `--no-configure` to force explicit tree mode. All
+tool-owned temporary files stay under the output directory.
 
 The installed package also provides `rocm-cuda-migrate` as an alias. Conversion
 success is not a build, runtime, numerical or support claim. The measured Docker
@@ -75,8 +81,8 @@ in `docs/evidence/cuda_samples_api_versions.json`.
 ```text
 rocm10-samples-compat check-env [--json] [--strict]
 rocm10-samples-compat convert --input DIR --output DIR
-    [--compile-commands FILE] [--cuda-root DIR]
-    [--include DIR] [--define NAME[=VALUE]]
+    [--cuda-root DIR] [--compile-commands FILE | --no-configure]
+    [--configure-arg ARG] [--include DIR] [--define NAME[=VALUE]]
     [--source PATTERN] [--exclude PATTERN] [--force] [--json]
 rocm10-samples-compat show-manifest
 rocm10-samples-compat list-batches [--json]
@@ -174,6 +180,7 @@ P6_deferred_platform         14
 |   |-- process.py
 |   |-- project.py
 |   |-- redirects.py
+|   |-- workspace.py
 |   |-- spec.py
 |   |-- data/cuda-samples-v12.9.json
 |   |-- data/specs/*.json

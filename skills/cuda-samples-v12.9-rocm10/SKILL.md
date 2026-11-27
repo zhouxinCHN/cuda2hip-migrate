@@ -35,12 +35,17 @@ python3 -m rocm10_samples_compat run-sample --sample vectorAdd
 python3 -m rocm10_samples_compat run-batch --batch P0_baseline
 python3 -m rocm10_samples_compat check-env --strict            # fails on non-target ROCm
 python3 -m rocm10_samples_compat convert --input DIR --output DIR \
-  [--compile-commands FILE] [--cuda-root DIR]
+  [--cuda-root DIR] [--compile-commands FILE | --no-configure] \
+  [--configure-arg ARG]
 ```
 
 `run-sample` and `run-batch` exit non-zero when any sample fails C3. `convert`
 converts source only and exits 2 on a blocking conversion issue; its success is
-not a build or support claim.
+not a build or support claim. With a root `CMakeLists.txt`, `convert`
+automatically runs CMake configure into
+`<output>/.tmp/<project>/cmake-build` to obtain compile commands. Use
+`--no-configure` to force explicit tree mode; an existing
+`--compile-commands` database wins over configuration.
 
 ## Pipelines
 
@@ -62,17 +67,21 @@ Project conversion (`convert`, no build/run):
 
 ```text
 arbitrary CUDA input tree (read-only)
+  -> optional .tmp/<project>/cmake-build/compile_commands.json
   -> .migration/source/
   -> .migration/preprocessed/
   -> .migration/hipified/
   -> src/                  converted tree, relative layout preserved
-  -> reports/migration.json, changes.jsonl, hipify.log
+  -> reports/migration.json, changes.jsonl, hipify.log, configure.log
   -> rocm-migration.cmake  compatibility dependencies for the real build
 ```
 
-Every stage keeps its own directory. The original input/checkout is never
-written to, and no patch file exists anywhere in either pipeline. See
-`docs/generic-conversion.md` for compile-database behavior and limitations.
+Every stage keeps its own directory. All tool-owned temporary data is under the
+user-selected output: CMake build files, HIPIFY `--temp-dir`, and child
+`TMPDIR/TMP/TEMP`. CMake configure executes project CMake code and is therefore
+not a sandbox. The original input/checkout is never written to, and no patch
+file exists anywhere in either pipeline. See `docs/generic-conversion.md` for
+compile-database behavior and limitations.
 
 ## Agent failure-analysis workflow
 
@@ -134,9 +143,11 @@ execution then run without an agent.
 
 ## hipify-clang environment facts
 
-Each claim below is followed by what was actually observed on ROCm 7.2.4 /
-hipify-clang 22.0.0git. Distinguish *tool requirements* from *project
-conventions*; only the former may be stated as a fact about hipify-clang.
+Each claim below is followed by what was actually observed. Unless a claim says
+otherwise, the observation is from ROCm 7.2.4 / hipify-clang 22.0.0git; the
+temporary-directory and CMake response-file facts were measured on ROCm 10.0.0
+/ hipify-clang 23. Distinguish *tool requirements* from *project conventions*;
+only the former may be stated as a fact about hipify-clang.
 
 ### Tool requirements
 
@@ -167,23 +178,31 @@ conventions*; only the former may be stated as a fact about hipify-clang.
    `[HIPIFY] error: source file: ... doesn't exist` and **exits 0**. A bare
    `error:` line is **not** a failure signal: a successful translation still
    prints `error: must pass in an explicit nvptx64 gpu architecture to 'ptxas'`.
+6. **`--temp-dir` does not contain every temporary file by itself.** Measured
+   on ROCm 10.0.0: `--temp-dir` held the final `.hip` temp file while Clang's
+   preprocessing temp file still appeared under `TMPDIR`. Set both, with
+   `TMPDIR` pointing into the caller's output root.
+7. **CMake CUDA compile commands can hide include paths.** Measured with CMake
+   3.28.3 and CUDA 12.9: CMake emits
+   `--options-file CMakeFiles/<target>.dir/includes_CUDA.rsp`; the converter
+   must expand `--options-file` and `@file` arguments before extracting `-I`.
 
 ### Project conventions (not tool requirements)
 
-6. **`--cuda-path` is always absolute.** This version also accepted a relative
+8. **`--cuda-path` is always absolute.** This version also accepted a relative
    path in a minimal run, so this is a reproducibility decision, not a
    requirement.
-7. **The source directory is not added to hipify's `-I` path.** Adding it did
+9. **The source directory is not added to hipify's `-I` path.** Adding it did
    break the v12.9 `vectorAdd` run (`EXIT_FAILURE`/`blockDim` undeclared), but
    the same flag on a minimal two-file source succeeded, so the trigger is
    sample-specific and is not a general rule.
-8. **ROCm HIP headers are not made reachable during translation.** This does
-   fail, but only when the translated source actually includes
-   `<hip/hip_runtime.h>`: hipify defines `__HIP_PLATFORM_NVIDIA__`, HIP selects
-   `nvidia_detail/nvidia_hip_runtime_api.h`, and it references CUDA 12.x-only
-   identifiers (`cudaMemPrefetchAsync_v2`) that CUDA 12.0 headers do not have —
-   exit 1, no output. Keeping HIP headers off the include path and branching the
-   overlay header on `__HIPCC__` avoids the situation entirely.
+10. **ROCm HIP headers are not made reachable during translation.** This does
+    fail, but only when the translated source actually includes
+    `<hip/hip_runtime.h>`: hipify defines `__HIP_PLATFORM_NVIDIA__`, HIP selects
+    `nvidia_detail/nvidia_hip_runtime_api.h`, and it references CUDA 12.x-only
+    identifiers (`cudaMemPrefetchAsync_v2`) that CUDA 12.0 headers do not have —
+    exit 1, no output. Keeping HIP headers off the include path and branching the
+    overlay header on `__HIPCC__` avoids the situation entirely.
 
 ### CUDA 12.9 header requirements
 
@@ -337,11 +356,13 @@ current result.
 ## Next action
 
 P0 is complete on the target and the generic converter is a tested developer
-preview. Before expanding either:
+preview. Automatic CMake configuration, response-file expansion and output-root
+temporary containment are implemented and measured; the converter still stops
+at source conversion. Before expanding either:
 
 1. Add P1 sample specs and overlay coverage; do not infer support for samples
    without C1/C2/C3 evidence.
-2. Exercise `convert` on real multi-target projects with
+2. Exercise `convert` on real multi-target projects with generated or provided
    `compile_commands.json`; generic, stable rules should be promoted to HIPIFY.
 3. The target machine is a container; see
    `docs/evidence/p0-baseline-rocm10-gfx1201.md` for the image, device

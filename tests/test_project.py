@@ -203,6 +203,88 @@ class CompileDatabaseTests(unittest.TestCase):
                 excludes=(),
             )
 
+    def test_expands_cmake_style_options_file(self) -> None:
+        response = _write(
+            self.root / "build" / "CMakeFiles" / "main.dir" / "includes_CUDA.rsp",
+            '-I"include"\n-DRSP=1\n-std=c++17\n',
+        )
+        database = self._database(
+            [
+                {
+                    "directory": str(self.root),
+                    "file": "src/main.cu",
+                    "command": (
+                        "nvcc --options-file build/CMakeFiles/main.dir/"
+                        f"includes_CUDA.rsp -c src/main.cu"
+                    ),
+                }
+            ]
+        )
+        units = _units_from_compile_commands(
+            database,
+            input_root=self.root,
+            excludes=(),
+            source_patterns=(),
+        )
+        unit = units[0]
+        self.assertEqual(unit.includes[0].path, self.root / "include")
+        self.assertEqual(unit.defines, ("RSP=1",))
+        self.assertEqual(unit.standard, "c++17")
+        self.assertNotIn("--options-file", unit.ignored_arguments)
+        self.assertTrue(response.is_file())
+
+    def test_expands_at_file_and_nested_options_file(self) -> None:
+        nested = _write(
+            self.root / "build" / "CMakeFiles" / "main.dir" / "nested.rsp",
+            "-DNESTED=1\n",
+        )
+        _write(
+            self.root / "build" / "CMakeFiles" / "main.dir" / "outer.rsp",
+            '@CMakeFiles/main.dir/nested.rsp\n-I"../include"\n',
+        )
+        database = self._database(
+            [
+                {
+                    "directory": str(self.root / "build"),
+                    "file": str(self.root / "src" / "main.cu"),
+                    "arguments": [
+                        "nvcc",
+                        "@CMakeFiles/main.dir/outer.rsp",
+                        "-c",
+                        str(self.root / "src" / "main.cu"),
+                    ],
+                }
+            ]
+        )
+        units = _units_from_compile_commands(
+            database,
+            input_root=self.root,
+            excludes=(),
+            source_patterns=(),
+        )
+        unit = units[0]
+        self.assertEqual(unit.defines, ("NESTED=1",))
+        self.assertEqual(unit.includes[0].path, self.root / "include")
+        self.assertTrue(nested.is_file())
+
+    def test_missing_response_file_is_rejected(self) -> None:
+        database = self._database(
+            [
+                {
+                    "directory": str(self.root),
+                    "file": "src/main.cu",
+                    "command": "nvcc @missing.rsp -c src/main.cu",
+                }
+            ]
+        )
+        with self.assertRaises(ProjectError):
+            _units_from_compile_commands(
+                database,
+                input_root=self.root,
+                excludes=(),
+                source_patterns=(),
+            )
+
     def test_identical_duplicate_entries_are_merged(self) -> None:
         candidates = []
         for output in ("a.o", "b.o"):
@@ -480,6 +562,206 @@ class ConvertProjectTests(unittest.TestCase):
                 stderr="",
             ),
         )
+
+    def _fake_configure(self, command: list[str], **kwargs: object) -> ToolResult:
+        self.configure_command = list(command)
+        self.configure_environment = kwargs.get("env")
+        build_dir = Path(command[command.index("-B") + 1])
+        build_dir.mkdir(parents=True, exist_ok=True)
+        (build_dir / "compile_commands.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "directory": str(self.input),
+                        "file": "src/main.cu",
+                        "command": (
+                            "nvcc -I src/include -DFEATURE=1 -std=c++17 "
+                            "-c src/main.cu -o main.o"
+                        ),
+                    }
+                ]
+            ),
+            encoding="utf-8",
+        )
+        return ToolResult(
+            command=tuple(command),
+            returncode=0,
+            stdout="-- Configuring done\n",
+            stderr="",
+        )
+
+    def test_auto_configure_writes_inside_output_and_uses_generated_database(self) -> None:
+        _write(self.input / "CMakeLists.txt", "project(example LANGUAGES CUDA)\n")
+        with (
+            mock.patch(
+                "rocm10_samples_compat.project.hipify_source",
+                side_effect=self._fake_hipify,
+            ),
+            mock.patch(
+                "rocm10_samples_compat.project.run_logged",
+                side_effect=self._fake_configure,
+            ),
+        ):
+            outcome = convert_project(
+                MigrationRequest(
+                    input_root=self.input,
+                    output_root=self.output,
+                    cuda_root=self.cuda_root,
+                )
+            )
+
+        self.assertEqual(outcome.status, "completed")
+        self.assertEqual(outcome.report["compile_commands_source"], "configured")
+        self.assertEqual(outcome.report["configure"]["mode"], "configured")  # type: ignore[index]
+        build_dir = self.output / ".tmp" / "input" / "cmake-build"
+        self.assertEqual(
+            Path(self.configure_command[self.configure_command.index("-B") + 1]),
+            build_dir,
+        )
+        self.assertIn("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON", self.configure_command)
+        self.assertEqual(
+            Path(self.configure_environment["TMPDIR"]),  # type: ignore[index]
+            self.output / ".tmp" / "input" / "tmpdir",
+        )
+        self.assertTrue((self.output / "reports" / "configure.log").is_file())
+        self.assertTrue(
+            (self.output / "reports" / "configure.log")
+            .read_text(encoding="utf-8")
+            .startswith("$ cmake ")
+        )
+        self.assertEqual(
+            Path(outcome.report["output"]["temp"]),  # type: ignore[index]
+            self.output / ".tmp" / "input",
+        )
+        self.assertTrue((self.input / "CMakeLists.txt").is_file())
+
+    def test_no_configure_falls_back_to_tree_mode_with_warning(self) -> None:
+        _write(self.input / "CMakeLists.txt", "project(example LANGUAGES CUDA)\n")
+        with (
+            mock.patch(
+                "rocm10_samples_compat.project.hipify_source",
+                side_effect=self._fake_hipify,
+            ),
+            mock.patch(
+                "rocm10_samples_compat.project.run_logged",
+                side_effect=AssertionError("configure must not run"),
+            ),
+        ):
+            outcome = convert_project(
+                MigrationRequest(
+                    input_root=self.input,
+                    output_root=self.output,
+                    cuda_root=self.cuda_root,
+                    auto_configure=False,
+                )
+            )
+        self.assertEqual(outcome.status, "completed")
+        self.assertEqual(outcome.report["compile_commands_source"], "tree")
+        self.assertEqual(outcome.report["configure"]["mode"], "disabled")  # type: ignore[index]
+        self.assertTrue(
+            any(
+                issue["kind"] == "cmake-configuration-disabled"
+                for issue in outcome.report["issues"]
+            )
+        )
+
+    def test_configure_failure_keeps_log_and_stops_conversion(self) -> None:
+        _write(self.input / "CMakeLists.txt", "project(example LANGUAGES CUDA)\n")
+        failure = ToolResult(
+            command=("cmake",),
+            returncode=1,
+            stdout="",
+            stderr="CMake Error: no CUDA compiler\n",
+        )
+        with (
+            mock.patch(
+                "rocm10_samples_compat.project.hipify_source",
+                side_effect=self._fake_hipify,
+            ),
+            mock.patch(
+                "rocm10_samples_compat.project.run_logged",
+                return_value=failure,
+            ),
+        ):
+            with self.assertRaises(ProjectError):
+                convert_project(
+                    MigrationRequest(
+                        input_root=self.input,
+                        output_root=self.output,
+                        cuda_root=self.cuda_root,
+                    )
+                )
+        log = self.output / "reports" / "configure.log"
+        self.assertTrue(log.is_file())
+        self.assertIn("no CUDA compiler", log.read_text(encoding="utf-8"))
+        self.assertFalse((self.output / "reports" / "migration.json").exists())
+
+    def test_synthetic_cuda_root_is_not_passed_as_cmake_toolkit(self) -> None:
+        _write(self.input / "CMakeLists.txt", "project(example LANGUAGES CUDA)\n")
+        synthetic_root = self.root / "synthetic-cuda"
+        (synthetic_root / "bin").mkdir(parents=True)
+        (synthetic_root / "bin" / "nvcc").write_text("", encoding="utf-8")
+        cuda_root = CudaRoot(
+            path=synthetic_root,
+            version=12090,
+            version_string="12.9",
+            synthetic=True,
+            detection="test synthetic root",
+        )
+        with (
+            mock.patch(
+                "rocm10_samples_compat.project.hipify_source",
+                side_effect=self._fake_hipify,
+            ),
+            mock.patch(
+                "rocm10_samples_compat.project.run_logged",
+                side_effect=self._fake_configure,
+            ),
+        ):
+            outcome = convert_project(
+                MigrationRequest(
+                    input_root=self.input,
+                    output_root=self.output,
+                    cuda_root=cuda_root,
+                )
+            )
+        self.assertEqual(outcome.status, "completed")
+        self.assertFalse(
+            any(
+                argument.startswith("-DCUDAToolkit_ROOT=")
+                for argument in self.configure_command
+            )
+        )
+        self.assertTrue(
+            any(
+                argument.startswith("-DCMAKE_CUDA_COMPILER=")
+                for argument in self.configure_command
+            )
+        )
+
+    def test_explicit_database_wins_over_cmake_configuration(self) -> None:
+        _write(self.input / "CMakeLists.txt", "project(example LANGUAGES CUDA)\n")
+        with (
+            mock.patch(
+                "rocm10_samples_compat.project.hipify_source",
+                side_effect=self._fake_hipify,
+            ),
+            mock.patch(
+                "rocm10_samples_compat.project.run_logged",
+                side_effect=AssertionError("configure must not run"),
+            ),
+        ):
+            outcome = convert_project(
+                MigrationRequest(
+                    input_root=self.input,
+                    output_root=self.output,
+                    cuda_root=self.cuda_root,
+                    compile_commands=self.database,
+                )
+            )
+        self.assertEqual(outcome.status, "completed")
+        self.assertEqual(outcome.report["compile_commands_source"], "explicit")
+        self.assertIsNone(outcome.report["configure"])
 
     def test_conversion_writes_source_report_requirements_and_keeps_input(self) -> None:
         before = (self.input / "src" / "main.cu").read_bytes()

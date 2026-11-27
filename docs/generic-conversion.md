@@ -10,7 +10,7 @@ for the measured checks.
 
 ```text
 input:  arbitrary local CUDA source tree
-        optional compile_commands.json
+        optional compile_commands.json, or a CMake project that can generate one
 output: converted HIP source tree + machine-readable report + build requirements
 
 not included:
@@ -30,22 +30,89 @@ The generic command is available under both installed entry-point names:
 rocm-cuda-migrate convert --input ./cuda-app --output ../cuda-app-hip
 ```
 
-or from the repository without installation:
+For a CMake project with a root `CMakeLists.txt`, the converter configures it
+automatically to obtain per-target compile options:
+
+```bash
+rocm-cuda-migrate convert \
+  --input ./cuda-app \
+  --output ../cuda-app-hip \
+  --cuda-root /usr/local/cuda-12.9
+```
+
+From the repository without installation:
 
 ```bash
 PYTHONPATH=src python3 -m rocm10_samples_compat convert \
   --input ./cuda-app \
-  --output ../cuda-app-hip \
-  --cuda-root /usr/local/cuda-12.9 \
-  --compile-commands ./build/compile_commands.json
+  --output ../cuda-app-hip
 ```
 
-If `--cuda-root` is omitted, the existing CUDA-root resolver is used and a
-synthetic root may be materialised under `<output>/.migration/`.
+`--compile-commands` is an optional override, not a required first step. Use it
+when a build system other than CMake, an out-of-tree build, or a pre-generated
+database is the authoritative source of compilation options.
+
+If `--cuda-root` is omitted, the CUDA-root resolver is used and a synthetic root
+may be materialised under `<output>/.migration/`.
+
+### Automatic CMake configuration
+
+When `--compile-commands` is absent and the input root contains `CMakeLists.txt`,
+the converter runs:
+
+```bash
+cmake -S <input> -B <output>/.tmp/<project>/cmake-build \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+```
+
+It also supplies a usable `CMAKE_CUDA_COMPILER` when it can find one through
+the resolved CUDA root or `PATH`, and sets `CUDAToolkit_ROOT` to a CMake-usable
+toolkit root. For a synthetic hipify-only CUDA root, the real toolkit root is
+derived from the resolved compiler rather than passing the incomplete shim to
+CMake. It does not run `cmake --build` and does not execute the project's
+program.
+
+The configure command, exit status and log are recorded in
+`reports/configure.log` and in `reports/migration.json`. If configure fails, the
+conversion fails with a configuration error; it does not silently fall back to
+tree mode.
+
+Useful options:
+
+```bash
+rocm-cuda-migrate convert \
+  --input ./cuda-app \
+  --output ../cuda-app-hip \
+  --configure-arg=-DMY_FEATURE=ON
+
+rocm-cuda-migrate convert \
+  --input ./cuda-app \
+  --output ../cuda-app-hip \
+  --no-configure
+```
+
+`--no-configure` keeps tree mode explicit when a CMake project exists. The
+report records `compile_commands_source` as `explicit`, `configured` or `tree`,
+and records the configure command in `configure`.
+
+Automatic configuration requires `cmake` and a CUDA compiler recognized by
+CMake. A CUDA-language CMake project on a machine with only CUDA headers and no
+`nvcc` cannot be configured; supply a compile database from a suitable build
+machine or use tree mode.
+
+CMake/NVCC often puts include flags in a response file such as:
+
+```text
+--options-file CMakeFiles/app.dir/includes_CUDA.rsp
+```
+
+The converter expands `--options-file` and `@file` arguments before extracting
+the parse-relevant options. Without that expansion, an automatically generated
+database would look valid while silently losing include paths.
 
 ### Compile database mode
 
-This is the preferred mode for a real project:
+This remains the explicit override for a real multi-target project:
 
 ```bash
 cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
@@ -58,6 +125,8 @@ rocm-cuda-migrate convert \
 For each translation unit the converter reads its working directory, include
 search paths, definitions, `-U` options, language standard and forced includes.
 Paths inside the input tree are remapped to the corresponding converted file.
+Response files referenced by the database are expanded relative to the entry's
+working directory.
 
 NVCC-only arguments such as `-gencode`, `-Xcompiler`, `-Xptxas`, `-o` and
 architecture selection are not forwarded to hipify-clang. They are recorded in
@@ -70,13 +139,15 @@ Other compiler entries are reported but left untouched.
 
 ### Tree mode
 
-Without a compile database, all translatable sources under the input are
-selected and share the options supplied on the command line:
+Without a compile database and without automatic configuration, all
+translatable sources under the input are selected and share the options
+supplied on the command line:
 
 ```bash
 rocm-cuda-migrate convert \
   --input ./simple-app \
   --output ../simple-app-hip \
+  --no-configure \
   --include ./include \
   --define FEATURE_X=1 \
   --source 'src/*.cu' \
@@ -84,23 +155,34 @@ rocm-cuda-migrate convert \
 ```
 
 Tree mode is a convenience for simple projects; it is not a substitute for
-per-target compile options.
+per-target compile options. If `CMakeLists.txt` exists and `--no-configure` is
+used, the report contains a `cmake-configuration-disabled` warning.
 
 ## Output layout
 
 ```text
-<output>/
+<output>/                     user-selected, required
 ├── src/                      converted source, relative layout preserved
 ├── reports/
-│   ├── migration.json        schema and environment report
+│   ├── migration.json        schema, environment and configure report
 │   ├── changes.jsonl         every redirect and rule edit
-│   └── hipify.log            hipify-clang command/output per unit
+│   ├── hipify.log            hipify-clang command/output per unit
+│   └── configure.log         automatic CMake configure command/output
 ├── rocm-migration.cmake      generated dependency target
-└── .migration/
-    ├── source/
-    ├── preprocessed/
-    └── hipified/
+├── .migration/               durable staged audit trail
+│   ├── source/
+│   ├── preprocessed/
+│   ├── hipified/
+│   └── cuda-root/            synthetic CUDA root when needed
+└── .tmp/                     reconstructible tool-only temporary data
+    └── <project-slug>/
+        ├── cmake-build/      CMakeCache, compile_commands.json, CMakeFiles
+        ├── hipify/           hipify-clang --temp-dir
+        └── tmpdir/           child TMPDIR/TMP/TEMP
 ```
+
+The output root is mandatory. The converter creates no tool-owned temporary
+directory outside it. `--force` replaces the entire output tree.
 
 A CMake consumer can use the generated target:
 
@@ -116,10 +198,20 @@ belongs to the project.
 
 ## Behavior
 
-- The input tree is read-only. Output inside the input, or input inside the
-  output, is rejected.
+- The converter does not write to the input tree, and rejects output inside the
+  input, or input inside the output. Automatic CMake configure is a separate
+  boundary: see the project-CMake caveat below.
 - A non-empty output requires `--force`; `--force` replaces the whole output
   tree.
+- Tool-owned temporary data is placed under `<output>/.tmp/<project-slug>/`.
+  CMake configures into `cmake-build/`; HIPIFY receives both `--temp-dir` and a
+  child `TMPDIR` so clang's temporary files also stay under the output.
+- Automatic CMake configure executes the project's CMake scripts. `-B` selects
+  the build tree, but it is not a sandbox: a project script can write elsewhere
+  or access the network. The guarantee covers the converter and the temporary
+  directories it directly controls, not arbitrary project CMake code. Use
+  `--no-configure`, an existing database, or an external sandbox when strict
+  containment is required.
 - `.git`, `.hg`, `.svn`, `__pycache__` and common build products are excluded by
   default. Additional `--exclude` patterns are allowed.
 - Common-helper include routing is enabled only when the input actually
@@ -146,7 +238,7 @@ belongs to the project.
 | Code | Meaning |
 |---:|---|
 | 0 | conversion completed; review findings may still be present |
-| 1 | input, output, environment or tool configuration error |
+| 1 | input, output, environment, CMake configure or tool configuration error |
 | 2 | blocking conversion issue; see `reports/migration.json` |
 
 `convert` exit code `0` does not mean the output builds, runs, or is supported.
@@ -154,6 +246,12 @@ belongs to the project.
 ## Current limitations
 
 - No project build or run step, and therefore no C1/C2/C3 claim.
+- Automatic configuration is limited to a root `CMakeLists.txt`; projects whose
+  build entry point is elsewhere need `--compile-commands` or tree mode.
+- Automatic configuration needs CMake and a compiler CMake can identify. It
+  does not install a CUDA compiler or repair a broken project.
+- CMake configure is not a sandbox. Project `execute_process`, `file(WRITE)`,
+  `FetchContent` and similar code can write outside the output directory.
 - No automatic rewrite of project CMake files, RPATHs, library names or include
   layouts. The user must adapt build configuration to use `src/` and the
   generated dependency target.
@@ -171,16 +269,18 @@ belongs to the project.
 ## Verification
 
 Unit tests cover input safety, recursive layout, compile-database extraction,
-argument filtering, redirect activation, rule dependency aggregation, blocked
+response-file expansion, argument filtering, redirect activation, rule
+dependency aggregation, automatic-configure command construction, blocked
 recovery and report output:
 
 ```bash
 make test
 ```
 
-On a ROCm host with `hipify-clang`, `hipcc` and the pinned samples checkout, the
-integration tests additionally convert, build and run `vectorAdd` and a project
-whose CUDA header is reached through `-I`. On Docker:
+On a ROCm host with `hipify-clang`, `hipcc`, `cmake` and the pinned samples
+checkout, the integration tests additionally convert, build and run `vectorAdd`,
+a project whose CUDA header is reached through `-I`, and a CMake CUDA project
+converted through automatically generated compile commands. On Docker:
 
 ```bash
 docker exec ubuntu2404 bash -lc \

@@ -26,10 +26,19 @@ Primary deliverable:   skills
 - The validation pipeline works: pre-HIPIFY include routing, hipify-clang runner,
   deterministic rules, Common helper overlay, C1/C2/C3 evidence capture.
 - A project-level `convert` command is implemented for arbitrary CUDA source
-  trees. It supports recursive layout preservation, optional per-unit
-  `compile_commands.json` options, deterministic redirects/rules, migration and
-  change reports, and a generated CMake dependency target. It does not build or
-  run the result; see `docs/generic-conversion.md`.
+  trees. It supports recursive layout preservation, optional explicit
+  `compile_commands.json` options, automatic CMake configuration into
+  `<output>/.tmp/<project>/cmake-build` when a root `CMakeLists.txt` exists,
+  response-file expansion, deterministic redirects/rules, migration and change
+  reports, and a generated CMake dependency target. It does not build or run
+  the result; see `docs/generic-conversion.md`.
+- All tool-owned temporary files are redirected under the user-supplied output
+  directory: `.tmp/<unit>/hipify`, `.tmp/<unit>/tmpdir` and
+  `.tmp/<unit>/cmake-build`, with `TMPDIR/TMP/TEMP` set for direct child
+  processes. Sample hipcc/run stages use `.tmp/<sample>/`.
+- Docker-target verification: 116 tests, including real HIPIFY + hipcc for
+  `vectorAdd`, an include-directory CUDA header, and an auto-configured CMake
+  CUDA project; P0 remains all C1/C2/C3.
 - `make verify` and `make run-p0` exist. `verify-checkout --checkout` is fixed,
   and `primary_gfx_architecture()` now preserves rocminfo agent order, so the
   discrete `gfx1201` is selected before the iGPU on the target.

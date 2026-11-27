@@ -36,6 +36,11 @@ from .redirects import (
 )
 from .rules import RULE_IDS, RuleChange, apply_post_hipify_rules, rule_hits
 from .spec import ADAPTATION_DEFINES, SampleSpec
+from .workspace import (
+    WorkspaceError,
+    temp_environment,
+    temp_root as workspace_temp_root,
+)
 
 STAGES = ("source", "preprocessed", "hipified", "adapted")
 TEXT_SUFFIXES = frozenset({".cu", ".cpp", ".c", ".cuh", ".h", ".hpp"})
@@ -137,6 +142,7 @@ def _hipify(
     cuda_root: CudaRoot,
     include_dirs: tuple[Path, ...],
     defines: tuple[str, ...],
+    temp_dir: Path,
 ) -> None:
     # Start from the preprocessed tree so that files HIPIFY does not translate
     # (local headers it was not asked to process, data files) still reach the
@@ -159,6 +165,7 @@ def _hipify(
                 ["--skip-excluded-preprocessor-conditional-blocks"]
                 + [f"-D{define}" for define in defines]
             ),
+            temp_dir=temp_dir,
         )
 
     # hipify-clang writes translated local headers next to their input with a
@@ -192,6 +199,7 @@ def _build(
     checkout: Checkout,
     arch: str,
     work: Path,
+    temp_root: Path,
 ) -> tuple[list[str], Path, str]:
     sources = sorted(
         path.name
@@ -220,7 +228,11 @@ def _build(
         str(binary),
         *[f"-l{library}" for library in spec.libraries],
     ]
-    result = run_logged(command, cwd=adapted)
+    result = run_logged(
+        command,
+        cwd=adapted,
+        env=temp_environment(temp_root / "hipcc"),
+    )
     log = work / "build.log"
     log.write_text(
         "$ " + " ".join(command) + "\n\n" + result.stdout + result.stderr,
@@ -240,11 +252,17 @@ def _run(
     *,
     spec: SampleSpec,
     work: Path,
+    temp_root: Path,
 ) -> tuple[list[str], int, str, Path]:
     run_dir = work / "run"
     run_dir.mkdir(exist_ok=True)
     command = [str(binary), *spec.run_args]
-    result = run_logged(command, cwd=run_dir, timeout=spec.timeout_seconds)
+    result = run_logged(
+        command,
+        cwd=run_dir,
+        timeout=spec.timeout_seconds,
+        env=temp_environment(temp_root / "run"),
+    )
     log = work / "run.log"
     log.write_text(result.output + "\n", encoding="utf-8")
     return command, result.returncode, result.output, log
@@ -274,6 +292,10 @@ def run_sample(
     work = (artifacts_root / spec.name).resolve()
     work.mkdir(parents=True, exist_ok=True)
     sample_dir = sample_directory(checkout, spec.path)
+    try:
+        sample_temp = workspace_temp_root(artifacts_root, spec.name)
+    except WorkspaceError as error:
+        raise StageError("workspace", "C1", str(error)) from error
 
     cuda_root = resolve_cuda_root(work)
     reported_arch = arch or environment.primary_gfx_architecture()
@@ -287,6 +309,7 @@ def run_sample(
         "cuda_samples": {"tag": checkout.tag, "commit": checkout.commit},
         "environment": environment.evidence_environment(),
         "cuda_root": cuda_root.as_dict(),
+        "workspace": {"temp_root": str(sample_temp)},
         "arch": reported_arch,
         "redirects": {
             "declared": [
@@ -349,6 +372,7 @@ def run_sample(
             # parse the translation unit as a local header and fail.
             include_dirs=(checkout.common, overlay_directory()),
             defines=ADAPTATION_DEFINES,
+            temp_dir=sample_temp / "hipify",
         )
 
         for name in spec.sources:
@@ -368,7 +392,12 @@ def run_sample(
         evidence["rules"]["hits"] = rule_hits(rule_changes)  # type: ignore[index]
 
         command, binary, build_log = _build(
-            adapted, spec=spec, checkout=checkout, arch=reported_arch, work=work
+            adapted,
+            spec=spec,
+            checkout=checkout,
+            arch=reported_arch,
+            work=work,
+            temp_root=sample_temp,
         )
         evidence["build"] = {
             "c1": True,
@@ -395,7 +424,9 @@ def run_sample(
         return SampleRun(spec.name, "blocked", evidence, work)
 
     try:
-        run_command, exit_code, output, run_log = _run(binary, spec=spec, work=work)
+        run_command, exit_code, output, run_log = _run(
+            binary, spec=spec, work=work, temp_root=sample_temp
+        )
     except Exception as error:  # noqa: BLE001 - a crash must still produce evidence
         evidence["run"] = {"c2": False, "error": str(error), "log": str(work / "run.log")}
         evidence["blocked_at"] = "C2"

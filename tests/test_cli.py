@@ -7,7 +7,7 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
-from rocm10_samples_compat.cli import main
+from rocm10_samples_compat.cli import build_parser, main
 
 
 class CliTests(unittest.TestCase):
@@ -42,6 +42,27 @@ class CliTests(unittest.TestCase):
                 code = main(["verify-checkout", "--checkout", directory])
             self.assertEqual(code, 1)
             self.assertIn("not a git checkout", errors.getvalue())
+
+    def test_convert_separates_configure_control_from_output(self) -> None:
+        parser = build_parser()
+        default = parser.parse_args(
+            ["convert", "--input", "in", "--output", "out"]
+        )
+        self.assertTrue(default.auto_configure)
+        self.assertEqual(default.configure_arg, [])
+        disabled = parser.parse_args(
+            [
+                "convert",
+                "--input",
+                "in",
+                "--output",
+                "out",
+                "--no-configure",
+                "--configure-arg=-DFEATURE=ON",
+            ]
+        )
+        self.assertFalse(disabled.auto_configure)
+        self.assertEqual(disabled.configure_arg, ["-DFEATURE=ON"])
 
 
 if __name__ == "__main__":
